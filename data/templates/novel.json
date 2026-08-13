@@ -1,0 +1,10 @@
+{
+  "id": "novel",
+  "name": "小说",
+  "attachments": [
+    { "type": "outline",    "name": { "zh": "大纲", "en": "Outline" },        "contextLabel": { "zh": "文章大纲", "en": "Outline" } },
+    { "type": "worldview",  "name": { "zh": "世界观", "en": "Worldview" },    "contextLabel": { "zh": "世界观设定", "en": "Worldview" } },
+    { "type": "characters", "name": { "zh": "人设", "en": "Characters" },    "contextLabel": { "zh": "人物设定", "en": "Characters" } },
+    { "type": "relations",  "name": { "zh": "人物关系", "en": "Relations" }, "contextLabel": { "zh": "人物关系", "en": "Relations" } }
+  ]
+}

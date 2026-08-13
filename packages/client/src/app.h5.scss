@@ -1,0 +1,194 @@
+// H5 端尺寸覆盖层：引入移动端样式后，把字号/间距/高度覆盖为 web 常规尺寸。
+// 小程序端不加载本文件（保留 750 设计稿的移动尺寸 + rpx 缩放）。
+
+@use './app.scss';
+
+// ===== 基础字号与间距 =====
+.app {
+  font-size: 14px;
+}
+
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-4 { margin-bottom: 16px; }
+.ml-1 { margin-left: 4px; }
+.px-1 { padding-left: 4px; padding-right: 4px; }
+.px-2 { padding-left: 12px; padding-right: 12px; }
+.px-3 { padding-left: 16px; padding-right: 16px; }
+.px-4 { padding-left: 20px; padding-right: 20px; }
+.py-1 { padding-top: 4px; padding-bottom: 4px; }
+.py-2 { padding-top: 8px; padding-bottom: 8px; }
+.py-3 { padding-top: 12px; padding-bottom: 12px; }
+.p-3 { padding: 12px; }
+.p-4 { padding: 16px; }
+
+.text-sm { font-size: 13px; }
+.text-xs { font-size: 12px; }
+.text-base { font-size: 14px; }
+
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+
+// ===== 按钮 =====
+.btn {
+  font-size: 14px;
+  padding: 0 16px;
+  height: 36px;
+  line-height: 36px;
+  &-sm { height: 32px; padding: 0 12px; font-size: 13px; line-height: 32px; }
+  &-icon { width: 32px; height: 32px; padding: 0; }
+}
+
+// ===== 输入框 =====
+.input {
+  height: 36px;
+  line-height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.textarea {
+  padding: 8px 12px;
+  font-size: 14px;
+  min-height: 80px;
+}
+
+// 编辑器书写区：顶部贴紧 tab 指示条
+.editor-textarea {
+  padding-top: 0;
+}
+
+// ===== 对话框 =====
+.dialog-panel {
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.dialog-title {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+// ===== 侧滑面板 =====
+.sheet-panel {
+  width: 300px;
+}
+
+// ===== 下拉菜单 =====
+.menu-panel {
+  right: 8px;
+  top: 60px;
+  min-width: 200px;
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.menu-label {
+  font-size: 11px;
+  padding: 6px 8px 3px;
+}
+
+.menu-item {
+  padding: 7px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+.menu-sep {
+  margin: 5px 0;
+}
+
+.menu-radio {
+  padding: 7px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  .dot {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--muted-fg);
+    margin-right: 8px;
+  }
+  &.checked .dot {
+    border: 4px solid var(--accent-warm);
+  }
+}
+
+// ===== 列表行 =====
+.list-item {
+  border-radius: 6px;
+  padding: 14px;
+  margin-bottom: 6px;
+}
+
+// ===== 对话气泡 =====
+.bubble-user,
+.bubble-ai {
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.bubble-note {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.thinking-box {
+  margin-top: 6px;
+  font-size: 12px;
+  padding-left: 8px;
+}
+
+// ===== 版本 Tabs =====
+.tab {
+  padding: 7px 12px;
+  font-size: 11px;
+  &.active {
+    &::after {
+      height: 2px;
+      left: -3px;
+      right: -3px;
+    }
+  }
+}
+
+// scroll-view 横向滚动条占用 8px 高度，导致 tab 指示条下方出现缝隙
+.taro-scroll-view__scroll-x {
+  overflow: auto hidden;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// ===== 通用 =====
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-warm);
+}
+
+// 滚动条：跟随主题（H5 桌面端）
+.app ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.app ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app ::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.app ::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-fg);
+}

@@ -1,0 +1,105 @@
+// English locale
+export default {
+  // Common
+  'common.save': 'Save',
+  'common.cancel': 'Cancel',
+  'common.delete': 'Delete',
+  'common.confirm': 'Confirm',
+  'common.loading': 'Loading...',
+  'common.close': 'Close',
+  'common.untitled': 'Untitled',
+  'common.empty': '(empty)',
+
+  // Document list
+  'doc.newTitle': 'New document title...',
+  'doc.create': 'Create',
+  'doc.deleteTitle': 'Delete document',
+  'doc.deleteConfirm': 'Delete "{title}"? This cannot be undone. All chapters and paragraphs will be removed.',
+  'doc.deleting': 'Deleting...',
+  'doc.emptyHint': 'No documents yet. Create one to get started.',
+
+  // Sidebar
+  'sidebar.fulltext': 'Full Text',
+  'sidebar.chapters': 'Chapters',
+  'sidebar.paragraphN': 'Paragraph {n}',
+  'sidebar.newParagraph': 'New paragraph...',
+  'sidebar.newChapter': 'New chapter...',
+  'sidebar.moveUp': 'Move up',
+  'sidebar.moveDown': 'Move down',
+  'sidebar.rename': 'Rename',
+  'sidebar.wordCount': '{n} ch',
+  'sidebar.deleteChapter': 'Delete',
+  'sidebar.deleteChapterConfirm': 'Delete chapter "{name}" and all its paragraphs? This cannot be undone.',
+  'sidebar.deleteParagraphConfirm': 'Delete "{name}"? This cannot be undone.',
+  'sidebar.fulltextCount': '{n} ch',
+
+  // Editor
+  'editor.writingArea': 'Writing Area',
+  'editor.startWriting': 'Start writing...',
+  'editor.writeAttachment': 'Edit {name}...',
+  'editor.unsaved': 'Unsaved',
+  'editor.saving': 'Saving...',
+  'editor.review': 'Review',
+  'editor.unsavedTitle': 'Unsaved changes',
+  'editor.unsavedHint': 'You have unsaved changes. Save before switching?',
+  'editor.discard': 'Discard',
+  'editor.saveAndSwitch': 'Save & switch',
+
+  // AI panel
+  'ai.fulltextReview': 'Full-text Review',
+  'ai.attachmentReview': 'Attachment Review',
+  'ai.chapterReview': 'Chapter Review',
+  'ai.paragraphReview': 'Paragraph Review',
+  'ai.assistant': 'AI Assistant',
+  'ai.reviewOpinion': 'Opinion {n}',
+  'ai.submittedFulltext': 'Submitted full-text review',
+  'ai.submittedAttachment': 'Submitted attachment review',
+  'ai.submittedChapter': 'Submitted chapter review',
+  'ai.submittedParagraph': 'Submitted paragraph review',
+  'ai.question': 'Question',
+  'ai.requestFailed': 'Request failed',
+  'ai.thinking': 'Thinking',
+  'ai.thinkingInProgress': 'Thinking...',
+  'ai.reviewPlaceholder': 'Ask for editing advice...',
+  'ai.questionPlaceholder': 'Ask the AI...',
+  'ai.reviewRequest': 'Please review and give suggestions.',
+
+  // Draft versions
+  'drafts.noHistory': 'No version history',
+  'drafts.deleteTitle': 'Delete version',
+  'drafts.deleteConfirm': 'Delete this version? This cannot be undone.',
+  'drafts.justNow': 'just now',
+  'drafts.minutesAgo': '{n}m ago',
+  'drafts.hoursAgo': '{n}h ago',
+
+  // Settings menu
+  'settings.reviewStyle': 'Review Style',
+  'settings.gentle': 'Gentle',
+  'settings.strict': 'Strict',
+  'settings.praise': 'Encouraging',
+  'settings.theme': 'Theme',
+  'settings.light': 'Light',
+  'settings.dark': 'Dark',
+  'settings.apiConfig': 'API Config',
+
+  // API config
+  'apiConfig.title': 'AI API Config',
+  'apiConfig.model': 'Model',
+  'apiConfig.apiKey': 'API Key',
+  'apiConfig.apiBaseUrl': 'API Base URL',
+  'apiConfig.save': 'Save settings',
+  'apiConfig.saved': 'Saved',
+  'apiConfig.keyHint': 'The key is stored on your local server and never uploaded to third parties.',
+
+  // Network / stream errors
+  'error.server': 'Unexpected server response',
+  'error.requestFailed': 'Request failed',
+  'error.readStream': 'Failed to read response stream',
+  'error.network': 'Network request failed',
+  'error.aiRequest': 'Network request failed. Check your API Key and API URL.',
+  'error.saveFailed': 'Save failed, please retry',
+  'error.loadFailed': 'Loading failed, please retry',
+  'error.operationFailed': 'Operation failed',
+  'error.crashed': 'Something went wrong',
+  'error.reload': 'Reload',
+}

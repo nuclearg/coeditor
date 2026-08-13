@@ -1,0 +1,105 @@
+// 中文语言包（默认）
+export default {
+  // 通用
+  'common.save': '保存',
+  'common.cancel': '取消',
+  'common.delete': '删除',
+  'common.confirm': '确认',
+  'common.loading': '加载中...',
+  'common.close': '关闭',
+  'common.untitled': '未命名文章',
+  'common.empty': '（空）',
+
+  // 文档列表
+  'doc.newTitle': '新文章标题...',
+  'doc.create': '创建',
+  'doc.deleteTitle': '确认删除',
+  'doc.deleteConfirm': '确定要删除「{title}」吗？此操作不可撤销，文章内的所有章节、段落都将被删除。',
+  'doc.deleting': '删除中...',
+  'doc.emptyHint': '还没有文章，创建一篇开始吧',
+
+  // 侧栏
+  'sidebar.fulltext': '全文',
+  'sidebar.chapters': '章节',
+  'sidebar.paragraphN': '段落 {n}',
+  'sidebar.newParagraph': '新建段落...',
+  'sidebar.newChapter': '新建章节...',
+  'sidebar.moveUp': '上移',
+  'sidebar.moveDown': '下移',
+  'sidebar.rename': '改名',
+  'sidebar.wordCount': '{n}字',
+  'sidebar.deleteChapter': '删除',
+  'sidebar.deleteChapterConfirm': '确定删除章节「{name}」及其所有段落吗？此操作不可恢复。',
+  'sidebar.deleteParagraphConfirm': '确定删除「{name}」吗？此操作不可恢复。',
+  'sidebar.fulltextCount': '{n}字',
+
+  // 编辑器
+  'editor.writingArea': '书写区',
+  'editor.startWriting': '开始写作...',
+  'editor.writeAttachment': '编写{name}...',
+  'editor.unsaved': '未保存',
+  'editor.saving': '保存中...',
+  'editor.review': '审阅',
+  'editor.unsavedTitle': '当前未保存',
+  'editor.unsavedHint': '当前内容尚未保存，是否保存后再切换？',
+  'editor.discard': '不保存',
+  'editor.saveAndSwitch': '保存并切换',
+
+  // AI 面板
+  'ai.fulltextReview': '全文审阅',
+  'ai.attachmentReview': '附件审阅',
+  'ai.chapterReview': '章节审阅',
+  'ai.paragraphReview': '段落审阅',
+  'ai.assistant': 'AI 助手',
+  'ai.reviewOpinion': '审阅意见 {n}',
+  'ai.submittedFulltext': '提交了全文审阅',
+  'ai.submittedAttachment': '提交了附件审阅',
+  'ai.submittedChapter': '提交了章节审阅',
+  'ai.submittedParagraph': '提交了段落审阅',
+  'ai.question': '提问',
+  'ai.requestFailed': '请求失败',
+  'ai.thinking': '思考过程',
+  'ai.thinkingInProgress': '思考中...',
+  'ai.reviewPlaceholder': '询问编辑建议...',
+  'ai.questionPlaceholder': '向 AI 提问...',
+  'ai.reviewRequest': '请提出意见和建议。',
+
+  // 草稿版本
+  'drafts.noHistory': '暂无历史版本',
+  'drafts.deleteTitle': '删除版本',
+  'drafts.deleteConfirm': '确定删除该版本吗？此操作不可恢复。',
+  'drafts.justNow': '刚刚',
+  'drafts.minutesAgo': '{n}分钟前',
+  'drafts.hoursAgo': '{n}小时前',
+
+  // 设置菜单
+  'settings.reviewStyle': '审阅风格',
+  'settings.gentle': '温和',
+  'settings.strict': '严厉',
+  'settings.praise': '鼓励',
+  'settings.theme': '主题',
+  'settings.light': '日间',
+  'settings.dark': '夜间',
+  'settings.apiConfig': 'API 配置',
+
+  // API 配置
+  'apiConfig.title': 'AI 接口配置',
+  'apiConfig.model': '模型',
+  'apiConfig.apiKey': 'API Key',
+  'apiConfig.apiBaseUrl': 'API Base URL',
+  'apiConfig.save': '保存设置',
+  'apiConfig.saved': '已保存',
+  'apiConfig.keyHint': '密钥存储在本地服务器，不会上传到第三方',
+
+  // 网络/流式错误
+  'error.server': '服务器响应异常',
+  'error.requestFailed': '请求失败',
+  'error.readStream': '无法读取响应流',
+  'error.network': '网络请求失败',
+  'error.aiRequest': '网络请求失败，请检查 API Key 和 API 地址',
+  'error.saveFailed': '保存失败，请重试',
+  'error.loadFailed': '加载失败，请重试',
+  'error.operationFailed': '操作失败',
+  'error.crashed': '页面出错了',
+  'error.reload': '重新加载',
+}
