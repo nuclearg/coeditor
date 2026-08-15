@@ -65,7 +65,14 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
 
   // Abort in-flight stream on unmount or context switch
   useEffect(() => {
-    return () => { abortRef.current?.abort() }
+    return () => {
+      // 离开页面时同时通知服务端取消，避免流继续在后台烧 token
+      const inFlight = inFlightTurnRef.current
+      if (inFlight) {
+        void api.rpc('ai.cancel', { docId: inFlight.docId, convId: inFlight.convId, turnId: inFlight.turnId }).catch(() => {})
+      }
+      abortRef.current?.abort()
+    }
   }, [])
 
   const prevParentId = useRef(parentId)
