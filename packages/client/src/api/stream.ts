@@ -18,6 +18,8 @@ interface StreamParams {
   answerId?: string
   messages: Array<{ role: string; content: string }>
   reviewType?: string
+  /** 审阅维度（plot/character/...），后端注入维度指令 */
+  reviewFocus?: string
   contentContext?: string
 }
 

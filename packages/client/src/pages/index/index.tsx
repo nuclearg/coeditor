@@ -1,13 +1,14 @@
 import { Picker, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { useEffect, useState } from 'react'
-import { Layout } from '@/components/layout/Layout'
+import { LayoutShell } from '@/plugin/LayoutShell'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { Icon } from '@/components/ui/Icon'
-import { useDocumentStore, useAttachmentStore } from '@/stores'
+import { useDocumentStore, useLayoutStore, useAttachmentStore } from '@/stores'
 import { t, localize } from '@/lib/i18n'
+import { isH5 } from '@/lib/utils'
 import { useI18nStore } from '@/stores/i18nStore'
 import type { Document } from '@coeditor/shared'
 
@@ -54,9 +55,17 @@ export default function DocumentListPage() {
     }
   }
 
+  // 首页面包屑 = 品牌名（main.head.left 默认实现渲染）
+  const setBreadcrumb = useLayoutStore((s) => s.setBreadcrumb)
+  useEffect(() => {
+    setBreadcrumb(t('brand.name'))
+    return () => setBreadcrumb('')
+  }, [setBreadcrumb, t])
+
   return (
-    <Layout>
-      <View className="p-4" style={{ maxWidth: 800, margin: '0 auto' }}>
+    <LayoutShell
+      home={
+        <View className="p-4" style={{ maxWidth: 800, margin: '0 auto' }}>
         <View className="flex gap-2 mb-4">
           <View className="flex-1">
             <Input
@@ -124,7 +133,11 @@ export default function DocumentListPage() {
           )}
         </View>
       </View>
-
+      }
+      footer={
+        <View className="text-xs text-muted" style={{ fontSize: isH5() ? 12 : 22 }}>{t('footer.copyright')}</View>
+      }
+    >
       <Dialog
         open={deleteTarget !== null}
         title={t("doc.deleteTitle")}
@@ -142,6 +155,6 @@ export default function DocumentListPage() {
           </Button>
         </View>
       </Dialog>
-    </Layout>
+    </LayoutShell>
   )
 }

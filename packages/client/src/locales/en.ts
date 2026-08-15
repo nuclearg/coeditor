@@ -7,6 +7,8 @@ export default {
   'common.confirm': 'Confirm',
   'common.loading': 'Loading...',
   'common.close': 'Close',
+  'brand.name': 'CoEditor',
+  'footer.copyright': '© 2026 CoEditor',
   'common.untitled': 'Untitled',
   'common.empty': '(empty)',
 

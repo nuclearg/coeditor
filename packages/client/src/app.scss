@@ -68,7 +68,12 @@ page {
 .justify-end { justify-content: flex-end; }
 .shrink-0 { flex-shrink: 0; }
 .h-full { height: 100%; }
-.overflow-y-auto { overflow-y: auto; }
+.overflow-y-auto {
+  overflow-y: auto;
+  // 显式隐藏横向溢出：overflow-y:auto 时 overflow-x 隐式变 auto，
+  // 竖向滚动条占位会导致内容横向溢出并挤出水平滚动条
+  overflow-x: hidden;
+}
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hidden { display: none; }
 .text-center { text-align: center; }
@@ -318,21 +323,26 @@ page {
 }
 
 // ===== 对话气泡 =====
+// box-sizing: border-box 保证 max-width 含 padding，避免窄容器下气泡总宽超 100% 撑出横向滚动条
 .bubble-user {
   background: var(--accent-warm);
   color: #2b271e;
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px 24px;
   font-size: 26px;
   max-width: 85%;
+  box-sizing: border-box;
 }
 
 .bubble-ai {
   background: var(--muted);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px 24px;
   font-size: 26px;
   max-width: 92%;
+  box-sizing: border-box;
 }
 
 .bubble-note {

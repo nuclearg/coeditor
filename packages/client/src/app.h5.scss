@@ -57,9 +57,11 @@
   min-height: 80px;
 }
 
-// 编辑器书写区：顶部贴紧 tab 指示条
+// 编辑器书写区：顶部贴紧 tab 指示条，左右贴边（去掉 .textarea 的 12px 左右 padding）
 .editor-textarea {
   padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 // ===== 对话框 =====
@@ -174,10 +176,10 @@
   border-top-color: var(--accent-warm);
 }
 
-// 滚动条：跟随主题（H5 桌面端）
+// 滚动条：跟随主题（H5 桌面端），与 sidebar/分栏 resizer 同宽（4px）
 .app ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 .app ::-webkit-scrollbar-track {
@@ -186,9 +188,20 @@
 
 .app ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .app ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-fg);
+}
+
+// ===== AI 输入框：默认与编辑器按钮区等高（40px），随内容自动长高，达上限后内部滚动 =====
+// field-sizing 需作用于内部 .taro-textarea（light DOM 可命中；不支持时退化为固定高度，无副作用）
+.ai-panel-input .taro-textarea {
+  // vertical：仅高度随内容增长，宽度保持 width:100%（content 会连宽度一起接管导致撑破布局）
+  field-sizing: vertical;
+  height: auto;
+  width: 100%;
+  max-height: 120px;
+  overflow-y: auto;
 }

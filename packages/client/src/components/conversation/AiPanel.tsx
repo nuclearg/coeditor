@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Markdown } from '@/components/markdown/Markdown'
 import { SlotHost } from '@/plugin/SlotHost'
-import { getPlugins } from '@/plugin'
-import { useConversationStore } from '@/stores'
+import { useConversationStore, useAiInputStore, useReviewStore } from '@/stores'
+import { bus } from '@/plugin/bus'
 import { api } from '@/api/client'
 import { streamAiResponse } from '@/api/stream'
 
-import { cn, isH5 } from '@/lib/utils'
+import { cn, formatDateTime, isH5 } from '@/lib/utils'
+import { useIsMobile } from '@/hooks'
 import { useT } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/toast'
 import type { AiTurn, ConversationType } from '@coeditor/shared'
@@ -26,11 +27,9 @@ interface AiPanelProps {
   isFullText?: boolean
   autoSubmit?: boolean
   onAutoSubmitDone?: () => void
-  /** PC 模式：填满容器高度、内部滚动；false（移动端）时按内容自然舒展 */
-  fill?: boolean
 }
 
-export function AiPanel({ docId, selection, currentContent, isAttachment, attachmentId, isChapter, chapterId, isFullText, autoSubmit, onAutoSubmitDone, fill = true }: AiPanelProps) {
+export function AiPanel({ docId, selection, currentContent, isAttachment, attachmentId, isChapter, chapterId, isFullText, autoSubmit, onAutoSubmitDone }: AiPanelProps) {
   const t = useT()
   const conversations = useConversationStore((s) => s.conversations)
   const turns = useConversationStore((s) => s.turns)
@@ -42,8 +41,10 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const selectAnswer = useConversationStore((s) => s.selectAnswer)
 
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
-  const [input, setInput] = useState('')
-  const [streaming, setStreaming] = useState(false)
+  const input = useAiInputStore((s) => s.input)
+  const setInput = useAiInputStore((s) => s.setInput)
+  const streaming = useAiInputStore((s) => s.streaming)
+  const setStreaming = useAiInputStore((s) => s.setStreaming)
   const [streamingConvId, setStreamingConvId] = useState<string | null>(null)
   const [streamContent, setStreamContent] = useState('')
   const [thinkingContent, setThinkingContent] = useState('')
@@ -132,11 +133,6 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     setExpandedThinking((prev) => ({ ...prev, [answerId]: !prev[answerId] }))
   }, [])
 
-  const startNewConversation = async () => {
-    const conv = await createConversation(docId, parentType, parentId)
-    setActiveConvId(conv.id)
-  }
-
   const buildHistory = (turnsToUse: AiTurn[], upToTurnId?: string): Array<{ role: string; content: string }> => {
     const history: Array<{ role: string; content: string }> = []
     for (const t of turnsToUse) {
@@ -159,7 +155,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
    */
   const sendRequest = async (
     args:
-      | { kind: 'message'; question: string; hideQuestion?: boolean; targetConvId?: string }
+      | { kind: 'message'; question: string; hideQuestion?: boolean; targetConvId?: string; focus?: string; review?: boolean }
       | { kind: 'retry'; turnId: string },
   ) => {
     if (sendingRef.current) return
@@ -175,9 +171,10 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     const controller = new AbortController()
     abortRef.current = controller
 
+    let reviewFailed = false
     let convId = args.kind === 'message' ? (args.targetConvId || activeConvId) : activeConvId
+    let turnId = ''
     try {
-      let turnId: string
       let answerId: string | undefined
       let history: Array<{ role: string; content: string }>
 
@@ -223,6 +220,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           answerId,
           messages: history,
           reviewType,
+          reviewFocus: args.kind === 'message' ? args.focus : undefined,
           contentContext: currentContent,
         },
         {
@@ -234,6 +232,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       )
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return
+      reviewFailed = true
       const msg = err instanceof Error ? err.message : t("ai.requestFailed")
       setError(msg || t("error.aiRequest"))
     } finally {
@@ -250,12 +249,16 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
         setStreamingConvId(null)
         setStreamContent('')
         setThinkingContent('')
+        // 审阅流结束/失败事件（插件据此复位 UI 状态，docs/plugin-v2.md §5）
+        if (args.kind === 'message' && args.review) {
+          bus.emit(reviewFailed ? 'review:failed' : 'review:completed', { turnId, focus: args.focus })
+        }
       }
     }
   }
 
-  const sendMessage = (question: string, hideQuestion = false, targetConvId?: string) =>
-    sendRequest({ kind: 'message', question, hideQuestion, targetConvId })
+  const sendMessage = (question: string, hideQuestion = false, targetConvId?: string, focus?: string, review = false) =>
+    sendRequest({ kind: 'message', question, hideQuestion, targetConvId, focus, review })
 
   const handleSend = () => {
     if (!input.trim()) return
@@ -279,6 +282,13 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     setStreamContent('')
     setThinkingContent('')
   }
+
+  // 注册发送/中止实现到 aiInputStore（插件替换输入框/发送按钮时共用协议）
+  const inputPlaceholder = selection ? t('ai.reviewPlaceholder') : t('ai.questionPlaceholder')
+  useEffect(() => {
+    useAiInputStore.getState().registerControls({ send: handleSend, abort: handleAbort })
+    useAiInputStore.getState().setPlaceholder(inputPlaceholder)
+  })
 
   // Auto-submit on AI review button click
   const autoSubmitLock = useRef(false)
@@ -304,6 +314,8 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       }
       autoSubmitLock.current = true
       const question = t("ai.reviewRequest")
+      // 审阅维度（若有）：一次性消费，随 ai.chat 请求下发（reviewFocus）
+      const focus = useReviewStore.getState().consumeFocus() ?? undefined
 
       const doSubmit = async () => {
         try {
@@ -313,13 +325,13 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           if (!currentConvId) {
             const conv = await createConversation(docId, parentType, parentId)
             setActiveConvId(conv.id)
-            await sendMessage(question, true, conv.id)
+            await sendMessage(question, true, conv.id, focus, true)
           } else if (currentTurns.length > 0) {
             const lastTurn = currentTurns[currentTurns.length - 1]
             await handleRetry(lastTurn.id)
           } else {
             setActiveConvId(currentConvId)
-            await sendMessage(question, true, currentConvId)
+            await sendMessage(question, true, currentConvId, focus, true)
           }
         } catch (err) {
           // createConversation (or anything above) rejected: surface it and
@@ -348,35 +360,24 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     void selectAnswer(docId, turnId, index).catch(() => {})
   }, [docId, selectAnswer])
 
-  // === ai-top 插槽的默认实现 ===
-  const aiTitle = isFullText ? t('ai.fulltextReview') : isAttachment ? t('ai.attachmentReview') : isChapter ? t('ai.chapterReview') : selection ? t('ai.paragraphReview') : t('ai.assistant')
+  // === aipanel 默认实现 ===
   const submittedLabel = isFullText ? t('ai.submittedFulltext') : isAttachment ? t('ai.submittedAttachment') : isChapter ? t('ai.submittedChapter') : selection ? t('ai.submittedParagraph') : t('ai.question')
-
-  const renderAiTitle = () => (
-    <View className="text-sm font-medium">{aiTitle}</View>
-  )
-
-  const renderNewButton = () => (
-    <Button variant="ghost" size="icon" onClick={startNewConversation}>
-      <Icon name="plus" size={28} />
-    </Button>
-  )
 
   const renderConversationTabs = () => {
     if (convList.length === 0) return null
     return (
       <ScrollView scrollX className="flex" style={{ width: '100%' }}>
-        {convList.map((conv, i) => (
+        {convList.map((conv, _i) => (
           <View
             key={conv.id}
-            className="flex items-center shrink-0"
+            className="flex items-end shrink-0"
             style={{ borderRight: '1px solid var(--border)' }}
           >
             <View
               className={cn('tab flex items-center gap-1', conv.id === activeConvId && 'active')}
               style={{ display: 'flex', alignItems: 'center' }}
             >
-              <View onClick={() => setActiveConvId(conv.id)}>{t('ai.reviewOpinion', { n: i + 1 })}</View>
+              <View onClick={() => setActiveConvId(conv.id)}>{formatDateTime(conv.createdAt)}</View>
               <View
                 className="hover-accent"
                 style={{ display: 'flex', alignItems: 'center', padding: '0 2px', marginLeft: 4 }}
@@ -409,28 +410,35 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     )
   }
 
-  // === ai-bottom 插槽的默认实现 ===
-  const inputPlaceholder = selection ? t('ai.reviewPlaceholder') : t('ai.questionPlaceholder')
 
-  const renderInput = () => (
-    <View className="flex-1">
-      <Textarea
-        className="text-sm resize-none"
-        style={{ height: isH5() ? 40 : 76, minHeight: isH5() ? 40 : 76, padding: isH5() ? '10px 12px' : undefined }}
-        placeholder={inputPlaceholder}
-        value={input}
-        onChange={setInput}
-        onEnter={handleSend}
-        disabled={streaming}
-      />
-    </View>
-  )
+  // 移动端（竖向排列）高度由内容撑开；PC 用 flex 撑满
+  const isMobile = useIsMobile()
+
+  // === aipanel.foot 默认实现（输入/发送；受控协议在 aiInputStore） ===
+  const renderInput = () => {
+    const placeholder = useAiInputStore.getState().placeholder
+    return (
+      <View className="flex-1">
+        <Textarea
+          className={cn('text-sm resize-none', isH5() && 'ai-panel-input')}
+          style={isH5()
+            ? { height: 38, minHeight: 38, padding: '6px 10px', boxSizing: 'border-box' }
+            : { height: 60, minHeight: 60 }}
+          placeholder={placeholder}
+          value={input}
+          onChange={setInput}
+          onEnter={handleSend}
+          disabled={streaming}
+        />
+      </View>
+    )
+  }
 
   const renderSendButton = () => (
     <Button
       size="icon"
       className="shrink-0"
-      style={{ width: isH5() ? 40 : 76, height: isH5() ? 40 : 76 }}
+      style={{ width: isH5() ? 38 : 60, height: isH5() ? 38 : 60 }}
       onClick={streaming ? handleAbort : handleSend}
     >
       <Icon name={streaming ? 'stop' : 'send'} size={isH5() ? 18 : 28} />
@@ -438,31 +446,32 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   )
 
   return (
-    <View className="flex flex-col" style={fill ? { flex: 1, minHeight: 0 } : undefined}>
-      {/* Conversation tabs（ai-top 插槽）：默认仅渲染会话 tabs；标题/新建按钮积木保留供插件使用 */}
-      {((convList.length > 0) || getPlugins().some((p) => p.ui?.slots?.['ai-top'])) && (
-        <View className="shrink-0">
-          <SlotHost
-            slot="ai-top"
-            ctx={{
-              conversations: convList,
-              activeConvId,
-              createConversation: startNewConversation,
-              renderTitle: renderAiTitle,
-              renderNewButton,
-              renderConversationTabs,
-            }}
-            defaults={renderConversationTabs()}
-          />
-        </View>
-      )}
+    <View className="flex flex-col" style={isMobile ? undefined : { flex: 1, minHeight: 0 }}>
+      {/* aipanel.head：左=留空 / 中=AI conversation tabs（左对齐，贴底）/ 右=留空（固定高度，无边框） */}
+      <SlotHost
+        slot="aipanel.head"
+        defaults={
+          <View className="flex items-end gap-2 shrink-0" style={{ height: isH5() ? 30 : 50 }}>
+            <SlotHost slot="aipanel.head.left" />
+            <SlotHost
+              slot="aipanel.head.middle"
+              defaults={convList.length > 0 ? renderConversationTabs() : undefined}
+            />
+            <View className="flex-1" />
+            <SlotHost slot="aipanel.head.right" />
+          </View>
+        }
+      />
 
-      {/* Messages */}
+      {/* aipanel.body：对话气泡区（可滚动） */}
+      <SlotHost
+        slot="aipanel.body"
+        defaults={
       <ScrollView
-        className="flex-1 p-3"
+        className={cn('p-3', !isMobile && 'flex-1')}
         scrollY
         scrollWithAnimation
-        style={{ minHeight: 0 }}
+        style={{ minHeight: 0, boxSizing: 'border-box', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
       >
         {error && (
           <View className="mb-2" style={{ background: 'rgba(176,74,56,0.1)', border: '1px solid rgba(176,74,56,0.3)', borderRadius: 12, padding: 16 }}>
@@ -517,24 +526,22 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
 
         <View ref={messagesEndRef as React.Ref<HTMLDivElement>} style={{ height: 4 }} />
       </ScrollView>
+        }
+      />
 
-      {/* Input（ai-bottom 插槽） */}
-      <View className="p-3 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
-        <View className="flex gap-2">
-          <SlotHost
-            slot="ai-bottom"
-            ctx={{
-              streaming,
-              send: handleSend,
-              abort: handleAbort,
-              placeholder: inputPlaceholder,
-              renderInput,
-              renderSendButton,
-            }}
-            defaults={<>{renderInput()}{renderSendButton()}</>}
-          />
-        </View>
-      </View>
+      {/* aipanel.foot：middle=输入框，right=发送/停止按钮（受控协议在 aiInputStore） */}
+      <SlotHost
+        slot="aipanel.foot"
+        defaults={
+          <View className="flex items-center gap-2 shrink-0" style={{ height: isH5() ? 38 : 60 }}>
+            <SlotHost slot="aipanel.foot.left" />
+            <View className="flex-1">
+              <SlotHost slot="aipanel.foot.middle" defaults={renderInput()} />
+            </View>
+            <SlotHost slot="aipanel.foot.right" defaults={renderSendButton()} />
+          </View>
+        }
+      />
     </View>
   )
 }
@@ -590,36 +597,36 @@ const TurnRow = memo(function TurnRow({
               </View>
             )}
             <Markdown content={answer.content} />
+            {/* 操作行：候选切换靠左，重试按钮靠右，均与气泡边缘对齐 */}
+            <View className="flex items-center gap-2" style={{ marginTop: 12 }}>
+              {turn.answers.length > 1 && (
+                <View className="flex items-center gap-1 text-xs text-muted">
+                  <View
+                    style={{ padding: '0 4px' }}
+                    onClick={() => onSelectAnswer(turn.id, (turn.currentAnswerIndex - 1 + turn.answers.length) % turn.answers.length)}
+                  >
+                    {'<'}
+                  </View>
+                  <View className="tabular-nums">{turn.currentAnswerIndex + 1}/{turn.answers.length}</View>
+                  <View
+                    style={{ padding: '0 4px' }}
+                    onClick={() => onSelectAnswer(turn.id, (turn.currentAnswerIndex + 1) % turn.answers.length)}
+                  >
+                    {'>'}
+                  </View>
+                </View>
+              )}
+              <View className="flex-1" />
+              <View
+                style={{ padding: 4, opacity: streaming ? 0.5 : 1 }}
+                onClick={streaming ? undefined : () => onRetry(turn.id)}
+              >
+                <Icon name="refresh" size={24} color="var(--muted-fg)" />
+              </View>
+            </View>
           </View>
         </View>
       ))}
-
-      <View className="flex items-center gap-2 ml-1 mb-1">
-        {turn.answers.length > 1 && (
-          <View className="flex items-center gap-1 text-xs text-muted">
-            <View
-              style={{ padding: '0 4px' }}
-              onClick={() => onSelectAnswer(turn.id, (turn.currentAnswerIndex - 1 + turn.answers.length) % turn.answers.length)}
-            >
-              {'<'}
-            </View>
-            <View className="tabular-nums">{turn.currentAnswerIndex + 1}/{turn.answers.length}</View>
-            <View
-              style={{ padding: '0 4px' }}
-              onClick={() => onSelectAnswer(turn.id, (turn.currentAnswerIndex + 1) % turn.answers.length)}
-            >
-              {'>'}
-            </View>
-          </View>
-        )}
-        <View className="flex-1" />
-        <View
-          style={{ padding: 4, opacity: streaming ? 0.5 : 1 }}
-          onClick={streaming ? undefined : () => onRetry(turn.id)}
-        >
-          <Icon name="refresh" size={24} color="var(--muted-fg)" />
-        </View>
-      </View>
     </View>
   )
 })

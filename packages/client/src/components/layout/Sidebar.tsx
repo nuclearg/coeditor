@@ -1,4 +1,4 @@
-import { View } from '@tarojs/components'
+import { Image, View } from '@tarojs/components'
 import { memo, useEffect, useMemo, useState, useRef } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { Input } from '@/components/ui/Input'
@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { useChapterStore, useParagraphStore, useParagraphDraftStore, useDocumentStore, useAttachmentStore } from '@/stores'
 import { SlotHost } from '@/plugin/SlotHost'
+import { useLayoutStore } from '@/stores/layoutStore'
 import { charCount, cn, getCurrentDraft, isH5 } from '@/lib/utils'
 import { useT, localize } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/toast'
+import logo from '@/assets/logo.png'
 import type { Document, DocumentTemplate, Attachment, AttachmentDef } from '@coeditor/shared'
 
 interface SidebarProps {
@@ -16,6 +18,10 @@ interface SidebarProps {
   doc: Document | null
   template: DocumentTemplate | null
   open: boolean
+  /** @deprecated 开关已统一到页面顶栏，该 prop 不再生效 */
+  onClose?: () => void
+  /** logo 点击（回首页） */
+  onNavigateHome?: () => void
   selectedParagraphId: string | null
   viewingChapterId: string | null
   viewingFullText: boolean
@@ -56,11 +62,14 @@ export const Sidebar = memo(function Sidebar({
   viewingChapterId,
   viewingFullText,
   editingAttachmentId,
+  onNavigateHome,
   onSelectParagraph,
   onSelectChapter,
   onSelectAttachment,
   onSelectFullText,
 }: SidebarProps) {
+  const toggleSidebar = useLayoutStore((s) => s.toggleSidebar)
+  const closeSidebar = useLayoutStore((s) => s.closeSidebar)
   const { chapters, createChapter, deleteChapter, updateChapter, reorderChapters } = useChapterStore()
   const { paragraphsByChapter, loadParagraphs, createParagraph, deleteParagraph, updateParagraphName, reorderParagraphs } = useParagraphStore()
   const { draftsByParagraph, loadDrafts } = useParagraphDraftStore()
@@ -300,7 +309,7 @@ export const Sidebar = memo(function Sidebar({
     editingTitle ? (
       <View className="flex items-center gap-1">
         <Input
-          className="text-sm font-semibold"
+          className="text-xs font-semibold text-muted"
           value={titleValue}
           focus
           onChange={setTitleValue}
@@ -314,7 +323,7 @@ export const Sidebar = memo(function Sidebar({
     ) : (
       <View className="flex items-center gap-1">
         <Icon name="outline" size={iconSize(30)} color="var(--muted-fg)" />
-        <View className="flex-1 font-semibold text-sm truncate">{doc?.title || t('common.untitled')}</View>
+        <View className="flex-1 text-xs font-semibold text-muted truncate" style={{ letterSpacing: 2 }}>{doc?.title || t('common.untitled')}</View>
         <View className="relative">
           <View
             className="hover-accent"
@@ -378,15 +387,51 @@ export const Sidebar = memo(function Sidebar({
   )
 
   return (
-    <View className="flex flex-col shrink-0 h-full" style={{ width: isH5() ? 260 : 420, borderRight: '1px solid var(--border)', background: 'var(--bg)', overflow: 'hidden' }}>
+    <View className="flex flex-col shrink-0 h-full" style={{ width: '100%', background: 'var(--muted)', overflow: 'hidden' }}>
+      {/* sidepanel.head：左=logo+title / 中=留空 / 右=收起按钮（无容器 padding，间距由内部控制） */}
+      <SlotHost
+        slot="sidepanel.head"
+        defaults={
+          <View className="flex items-center gap-2 shrink-0" style={{ height: isH5() ? 38 : 60 }}>
+            <View className="flex-1 flex items-center" style={{ minWidth: 0 }}>
+              <SlotHost
+                slot="sidepanel.head.left"
+                defaults={
+                  <View
+                    className="flex items-center gap-2 font-semibold shrink-0"
+                    style={{ fontSize: isH5() ? 20 : 34, overflow: 'hidden', paddingLeft: isH5() ? 12 : 16 }}
+                    onClick={onNavigateHome}
+                  >
+                    <Image src={logo} mode="aspectFit" style={{ width: isH5() ? 24 : 36, height: isH5() ? 24 : 36 }} />
+                    <View style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('brand.name')}</View>
+                  </View>
+                }
+              />
+            </View>
+            <SlotHost slot="sidepanel.head.middle" />
+            <View className="flex-1" />
+            <SlotHost
+              slot="sidepanel.head.right"
+              defaults={
+                <View className="hover-accent" style={{ padding: 8, borderRadius: 8, marginRight: isH5() ? 8 : 12 }} onClick={closeSidebar}>
+                  <Icon name="chevronLeft" size={28} color="var(--muted-fg)" />
+                </View>
+              }
+            />
+          </View>
+        }
+      />
+
+      {/* sidepanel.body：文档标题区 + 章节树（内置内容，可整体替换） */}
+      <SlotHost
+        slot="sidepanel.body"
+        defaults={
       <View className="overflow-y-auto flex-1">
-        {/* ========== 文档标题（sidebar-top 插槽） ========== */}
+        {/* ========== 文档标题区 ========== */}
         <View style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}>
-          <SlotHost
-            slot="sidebar-top"
-            ctx={{ docId, doc, template, renderTitle, renderAttachments, renderFulltextEntry }}
-            defaults={<>{renderTitle()}{renderFulltextEntry()}{renderAttachments()}</>}
-          />
+          {renderTitle()}
+          {renderFulltextEntry()}
+          {renderAttachments()}
         </View>
 
         {/* ========== 章节区 ========== */}
@@ -594,12 +639,24 @@ export const Sidebar = memo(function Sidebar({
             </View>
           )}
         </View>
-
-        {/* sidebar-bottom 插槽（默认无内容） */}
-        <View style={{ padding: 16 }}>
-          <SlotHost slot="sidebar-bottom" ctx={{ docId }} />
-        </View>
       </View>
+        }
+      />
+
+      {/* sidepanel.foot：左/中/右（供插件扩展；固定高度，无边框） */}
+      <SlotHost
+        slot="sidepanel.foot"
+        defaults={
+          <View className="flex items-center shrink-0" style={{ height: isH5() ? 38 : 60 }}>
+            <View className="flex-1">
+              <SlotHost slot="sidepanel.foot.left" />
+            </View>
+            <SlotHost slot="sidepanel.foot.middle" />
+            <View className="flex-1" />
+            <SlotHost slot="sidepanel.foot.right" />
+          </View>
+        }
+      />
 
       <Dialog
         open={confirmDelete !== null}

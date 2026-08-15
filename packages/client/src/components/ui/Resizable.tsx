@@ -79,15 +79,17 @@ export function ResizablePanel({
 
   return (
     <View ref={containerRef} className={cn('flex', className)} style={{ width: '100%' }}>
-      <View style={{ flexBasis: `${ratio * 100}%`, minWidth: 0 }} className="flex flex-col overflow-y-auto">
+      <View style={{ flexBasis: `${ratio * 100}%`, minWidth: 0, overflow: 'hidden' }} className="flex flex-col">
         {children[0]}
       </View>
       <View
         id={handleId}
         className="shrink-0"
+        data-resizable-handle="true"
         style={{ width: 4, cursor: 'col-resize', background: 'var(--border)' }}
+        onClick={(e) => e.stopPropagation()}
       />
-      <View style={{ flex: 1, minWidth: 0 }} className="flex flex-col overflow-y-auto">
+      <View style={{ flex: 1, minWidth: 0, overflow: 'hidden' }} className="flex flex-col">
         {children[1]}
       </View>
     </View>

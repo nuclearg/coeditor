@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { getPlugins } from '@/plugin'
 import { SlotHost } from '@/plugin/SlotHost'
-import type { LocalizedLabel, TopbarSettingsCtx } from '@/plugin'
+import type { LocalizedLabel } from '@/plugin'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useI18nStore } from '@/stores/i18nStore'
 import { useTheme } from '@/stores/theme'
 import { t } from '@/lib/i18n'
-import { cn } from '@/lib/utils'
+import { cn, isH5 } from '@/lib/utils'
 
 const STYLE_OPTIONS = [
   { value: 'gentle', label: () => t('settings.gentle') },
@@ -47,25 +47,21 @@ export function SettingsMenu() {
     fn()
   }
 
-  // === topbar-settings 插槽的默认实现（renderSettingsButton 积木） ===
-  const renderSettingsButton: TopbarSettingsCtx['renderSettingsButton'] = (opts) => (
+  // 设置入口按钮（main.headbar.right 的默认实现）
+  const renderSettingsButton = (opts?: { icon?: string; label?: string }) => (
     <View
       className="hover-accent"
-      style={{ padding: 10, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}
+      style={{ padding: 8, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}
       onClick={() => setOpen((v) => !v)}
     >
-      <Icon name={opts?.icon ?? 'gear'} size={28} />
-      {opts?.label && <Text style={{ fontSize: 24 }}>{opts.label}</Text>}
+      <Icon name={opts?.icon ?? 'gear'} size={isH5() ? 24 : 36} />
+      {opts?.label && <Text style={{ fontSize: isH5() ? 24 : 34 }}>{opts.label}</Text>}
     </View>
   )
 
   return (
     <>
-      <SlotHost
-        slot="topbar-settings"
-        ctx={{ open: () => setOpen(true), renderSettingsButton }}
-        defaults={renderSettingsButton()}
-      />
+      {renderSettingsButton()}
 
       {open && (
         <>

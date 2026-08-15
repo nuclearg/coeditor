@@ -1,6 +1,4 @@
 import { useState, useCallback } from 'react'
-import { useUIStore } from '@/stores'
-import { useIsMobile } from './useIsMobile'
 import { showErrorToast } from '@/lib/toast'
 import { t } from '@/lib/i18n'
 import type { DocumentTemplate } from '@coeditor/shared'
@@ -33,9 +31,6 @@ interface UseViewModeParams {
 }
 
 export function useViewMode({ docId, template, ensureAttachment }: UseViewModeParams): ViewModeState & ViewModeActions {
-  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen)
-  const isMobile = useIsMobile()
-
   const [selection, setSelection] = useState<SelectionState>(null)
   const [editingAttachmentId, setEditingAttachmentId] = useState<string | null>(null)
   const [viewingChapterId, setViewingChapterId] = useState<string | null>(null)
@@ -51,8 +46,7 @@ export function useViewMode({ docId, template, ensureAttachment }: UseViewModePa
   const switchToParagraph = useCallback((chapterId: string, paragraphId: string) => {
     clearView()
     setSelection({ chapterId, paragraphId })
-    if (isMobile) setSidebarOpen(false)
-  }, [clearView, isMobile, setSidebarOpen])
+  }, [clearView])
 
   const switchToAttachment = useCallback(async (type: string) => {
     if (docId && ensureAttachment && template?.attachments.some((a) => a.type === type)) {
@@ -65,8 +59,7 @@ export function useViewMode({ docId, template, ensureAttachment }: UseViewModePa
     }
     clearView()
     setEditingAttachmentId(type)
-    if (isMobile) setSidebarOpen(false)
-  }, [clearView, docId, ensureAttachment, template, isMobile, setSidebarOpen])
+  }, [clearView, docId, ensureAttachment, template])
 
   const switchToChapter = useCallback((chapterId: string) => {
     clearView()
@@ -76,8 +69,7 @@ export function useViewMode({ docId, template, ensureAttachment }: UseViewModePa
   const switchToFullText = useCallback(() => {
     clearView()
     setViewingFullText(true)
-    if (isMobile) setSidebarOpen(false)
-  }, [clearView, isMobile, setSidebarOpen])
+  }, [clearView])
 
   const selectionContext: ViewContext = viewingFullText
     ? 'fulltext'

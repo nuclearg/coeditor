@@ -7,6 +7,8 @@ export default {
   'common.confirm': '确认',
   'common.loading': '加载中...',
   'common.close': '关闭',
+  'brand.name': '校书郎',
+  'footer.copyright': '© 2026 校书郎',
   'common.untitled': '未命名文章',
   'common.empty': '（空）',
 

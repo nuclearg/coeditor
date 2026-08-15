@@ -30,12 +30,12 @@ class SlotErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
  */
 export function SlotHost<K extends PluginSlot>({ slot, ctx, defaults }: {
   slot: K
-  ctx: SlotCtxMap[K]
+  ctx?: SlotCtxMap[K]
   defaults?: ReactNode
 }) {
   return (
     <SlotErrorBoundary>
-      <Fragment>{computeSlotNode(getPlugins(), slot, ctx, defaults ?? null)}</Fragment>
+      <Fragment>{computeSlotNode(getPlugins(), slot, ctx ?? ({} as SlotCtxMap[K]), defaults ?? null)}</Fragment>
     </SlotErrorBoundary>
   )
 }

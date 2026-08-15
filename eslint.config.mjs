@@ -28,6 +28,16 @@ export default tseslint.config(
     },
   },
   {
+    // 根目录独立 Node 脚本
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     files: ['packages/server/**/*.ts', 'packages/shared/**/*.ts'],
     languageOptions: {
       globals: { ...globals.node },

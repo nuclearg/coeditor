@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import type { Document, DocumentTemplate } from '@coeditor/shared'
 
 export interface RadioOption {
   label: string
@@ -24,91 +23,69 @@ export type PluginMenuItem =
       onChange: (value: string) => void
     }
 
-// === 区块插槽（链式装饰：所有插件按注册顺序依次作用于 defaults） ===
+// === 区块插槽（锚点树，docs/plugin-v2.md §3/§6） ===
+// 页面 layout = sidepanel + main 左右两栏；main.body = 首页内容 or (editorpanel + aipanel)。
+// 每个 panel 分 head/body/foot 三段，head/foot 再分 left/middle/right 三栏（留空默认不展示）。
+// ctx 恒空纪律：ctx 是扩展哨位（类比 win32 lpReserved），一律为空；
+// 插件数据走 stores 直连、动作走公开 action、零件直接 import 宿主组件。新增字段需评审。
 
-export interface TopbarLeftCtx {
-  nav: { to: (path: string) => void }
-  /** 默认品牌区（图标 + 标题，点击回首页） */
-  renderBrand: (opts?: { logo?: string; title?: string }) => ReactNode
-}
-
-export interface TopbarRightCtx {
-  user: UserInfo | null
-  /** 用户徽章积木（可配置图标/文案；默认仅在有用户时渲染 user 图标 + 用户名） */
-  renderSettingsBadge: (opts?: { icon?: string; label?: string }) => ReactNode
-}
-
-export interface TopbarSettingsCtx {
-  /** 打开设置下拉菜单 */
-  open: () => void
-  /** 默认设置入口按钮（齿轮），可传 icon/label 定制 */
-  renderSettingsButton: (opts?: { icon?: string; label?: string }) => ReactNode
-}
-
-export interface SidebarTopCtx {
-  docId: string
-  doc: Document | null
-  template: DocumentTemplate | null
-  renderTitle: () => ReactNode
-  renderAttachments: () => ReactNode
-  renderFulltextEntry: () => ReactNode
-}
-
-export interface SidebarBottomCtx {
-  docId: string
-}
-
-export interface EditorTopCtx {
-  activeDrafts: unknown[]
-  currentDraftId: string
-  renderDraftTabs: () => ReactNode
-}
-
-export interface EditorBottomCtx {
-  dirty: boolean
-  saving: boolean
-  doSave: () => Promise<boolean>
-  submitReview: () => void
-  renderSaveButton: (opts?: { label?: string }) => ReactNode
-  renderReviewButton: () => ReactNode
-}
-
-export interface AiTopCtx {
-  conversations: unknown[]
-  activeConvId: string | null
-  createConversation: () => void
-  renderTitle: () => ReactNode
-  renderNewButton: () => ReactNode
-  renderConversationTabs: () => ReactNode
-}
-
-export interface AiBottomCtx {
-  streaming: boolean
-  send: () => void
-  abort: () => void
-  placeholder: string
-  renderInput: () => ReactNode
-  renderSendButton: () => ReactNode
-}
-
-/** 设置下拉菜单末尾的追加区（defaults = null，排在所有插件 menuItems 之后） */
-export type SettingsMenuCtx = Record<string, never>
-
-/** 应用根部全局挂载区（原 ui.host） */
-export type RootCtx = Record<string, never>
+/** 插槽上下文（恒空哨位；保留参数以保持签名稳定） */
+export type SlotCtx = Record<string, never>
 
 export interface SlotCtxMap {
-  'root': RootCtx
-  'topbar-left': TopbarLeftCtx
-  'topbar-right': TopbarRightCtx
-  'topbar-settings': TopbarSettingsCtx
-  'sidebar-top': SidebarTopCtx
-  'sidebar-bottom': SidebarBottomCtx
-  'editor-top': EditorTopCtx
-  'editor-bottom': EditorBottomCtx
-  'ai-top': AiTopCtx
-  'ai-bottom': AiBottomCtx
-  'settings-menu': SettingsMenuCtx
+  'root': SlotCtx
+  'settings-menu': SlotCtx
+
+  // === sidepanel（左侧栏） ===
+  'sidepanel': SlotCtx
+  'sidepanel.head': SlotCtx
+  'sidepanel.body': SlotCtx
+  'sidepanel.foot': SlotCtx
+  'sidepanel.head.left': SlotCtx
+  'sidepanel.head.middle': SlotCtx
+  'sidepanel.head.right': SlotCtx
+  'sidepanel.foot.left': SlotCtx
+  'sidepanel.foot.middle': SlotCtx
+  'sidepanel.foot.right': SlotCtx
+
+  // === main（右侧主区） ===
+  'main': SlotCtx
+  'main.head': SlotCtx
+  'main.body': SlotCtx
+  'main.foot': SlotCtx
+  'main.head.left': SlotCtx
+  'main.head.middle': SlotCtx
+  'main.head.right': SlotCtx
+  'main.foot.left': SlotCtx
+  'main.foot.middle': SlotCtx
+  'main.foot.right': SlotCtx
+
+  // === editorpanel（编辑面板） ===
+  'editorpanel': SlotCtx
+  'editorpanel.head': SlotCtx
+  'editorpanel.body': SlotCtx
+  'editorpanel.foot': SlotCtx
+  'editorpanel.head.left': SlotCtx
+  'editorpanel.head.middle': SlotCtx
+  'editorpanel.head.right': SlotCtx
+  'editorpanel.foot.left': SlotCtx
+  'editorpanel.foot.middle': SlotCtx
+  'editorpanel.foot.right': SlotCtx
+
+  // === aipanel（AI 面板） ===
+  'aipanel': SlotCtx
+  'aipanel.head': SlotCtx
+  'aipanel.body': SlotCtx
+  'aipanel.foot': SlotCtx
+  'aipanel.head.left': SlotCtx
+  'aipanel.head.middle': SlotCtx
+  'aipanel.head.right': SlotCtx
+  'aipanel.foot.left': SlotCtx
+  'aipanel.foot.middle': SlotCtx
+  'aipanel.foot.right': SlotCtx
+
+  // === 组件级 ===
+  'review-button': SlotCtx
 }
 
 export type PluginSlot = keyof SlotCtxMap
@@ -128,20 +105,16 @@ export interface CoEditorPlugin {
   settings?: {
     /** 向设置下拉菜单贡献的结构化菜单项（受控渲染，多插件聚合） */
     menuItems?: PluginMenuItem[]
-    /** 【兼容别名】替换设置入口按钮，等价于 ui.slots['topbar-settings'] */
-    trigger?: (ctx: { open: () => void }) => ReactNode
   }
 
   /** 用户 */
   user?: {
-    /** 当前用户信息（排他：第一个返回非 null 的插件生效），Header 展示 */
+    /** 当前用户信息（排他：第一个返回非 null 的插件生效），headbar 展示 */
     get?: () => Promise<UserInfo | null>
   }
 
   /** 区块插槽（链式装饰） */
   ui?: {
-    /** 【兼容别名】全局根部挂载，等价于 ui.slots['root'] */
-    host?: () => ReactNode
     /** 命名插槽：所有插件的渲染函数按注册顺序链式作用于 defaults */
     slots?: Partial<{ [K in PluginSlot]: SlotRenderer<K> }>
   }

@@ -1,3 +1,3 @@
 export default definePageConfig({
-  navigationBarTitleText: 'CoEditor',
+  navigationBarTitleText: '校书郎',
 })

@@ -1,24 +1,14 @@
-import type { ReactNode } from 'react'
+import { Fragment, isValidElement, type ReactNode } from 'react'
 import type { CoEditorPlugin, PluginSlot, SlotCtxMap, SlotRenderer } from './types'
 
 /**
- * 解析插槽渲染函数：
- * - ui.slots[slot] 优先
- * - 兼容别名：ui.host → 'root'；settings.trigger → 'topbar-settings'
+ * 解析插槽渲染函数（仅支持 ui.slots 命名插槽）。
  */
 export function resolveRenderer<K extends PluginSlot>(
   plugin: CoEditorPlugin,
   slot: K,
 ): SlotRenderer<K> | undefined {
-  if (plugin.ui?.slots?.[slot]) return plugin.ui.slots[slot] as SlotRenderer<K>
-  if (slot === 'root' && plugin.ui?.host) {
-    const host = plugin.ui.host
-    return () => host() as ReactNode
-  }
-  if (slot === 'topbar-settings' && plugin.settings?.trigger) {
-    return (_defaults, ctx) => plugin.settings!.trigger!({ open: (ctx as SlotCtxMap['topbar-settings']).open }) as ReactNode
-  }
-  return undefined
+  return plugin.ui?.slots?.[slot] as SlotRenderer<K> | undefined
 }
 
 /**

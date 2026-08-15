@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Dialog } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
-import { cn } from '@/lib/utils'
+import { cn, formatDateTime } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 import type { ParagraphDraft, AttachmentDraft } from '@coeditor/shared'
 
@@ -44,7 +44,7 @@ export function DraftTabs({ drafts, currentDraftId, onSelect, onDelete }: DraftT
           return (
             <View
               key={draft.id}
-              className="flex items-center shrink-0"
+              className="flex items-end shrink-0"
               style={{ borderRight: '1px solid var(--border)' }}
             >
               <View
@@ -52,7 +52,7 @@ export function DraftTabs({ drafts, currentDraftId, onSelect, onDelete }: DraftT
                 style={{ display: 'flex', alignItems: 'center' }}
                 onClick={() => onSelect(draft)}
               >
-                <View>{formatDraftTime(draft.createdAt, t)}</View>
+                <View>{formatDateTime(draft.createdAt)}</View>
                 <View
                   className="hover-accent"
                   style={{ display: 'flex', alignItems: 'center', padding: '0 2px', marginLeft: 4 }}
@@ -82,22 +82,4 @@ export function DraftTabs({ drafts, currentDraftId, onSelect, onDelete }: DraftT
       </Dialog>
     </View>
   )
-}
-
-function formatDraftTime(iso: string, t: (key: string, params?: Record<string, string | number>) => string): string {
-  const d = new Date(iso)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHour = Math.floor(diffMs / 3600000)
-
-  if (diffMin < 1) return t('drafts.justNow')
-  if (diffMin < 60) return t("drafts.minutesAgo", { n: diffMin })
-  if (diffHour < 24) return t("drafts.hoursAgo", { n: diffHour })
-
-  const month = d.getMonth() + 1
-  const day = d.getDate()
-  const hour = d.getHours().toString().padStart(2, '0')
-  const min = d.getMinutes().toString().padStart(2, '0')
-  return `${month}/${day} ${hour}:${min}`
 }

@@ -1,13 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { computeSlotNode, resolveRenderer } from '../slot-core'
 import type { CoEditorPlugin, PluginSlot, SlotCtxMap } from '../types'
 
-const slot = 'topbar-settings' as PluginSlot
-const ctx: SlotCtxMap['topbar-settings'] = {
-  open: () => {},
-  renderSettingsButton: () => null,
-}
+const slot = 'main.head.left' as PluginSlot
+// ctx 恒空纪律（docs/plugin-v2.md §2）：调用方不再传 ctx
+const ctx = {} as SlotCtxMap['main.head.left']
 
 function plugin(id: string, render: (defaults: ReactNode, ctx: unknown) => ReactNode): CoEditorPlugin {
   return {
@@ -64,53 +62,25 @@ describe('computeSlotNode — 链式装饰', () => {
   })
 })
 
-describe('resolveRenderer — 兼容别名', () => {
-  it('slots 优先于 ui.host（root）', () => {
-    const p = {
-      id: 'p',
-      ui: { host: () => 'HOST', slots: { root: () => 'SLOT' } },
-    } as unknown as CoEditorPlugin
-    expect(resolveRenderer(p, 'root')!(null, {} as never)).toBe('SLOT')
-  })
-
-  it('无 slots 时 ui.host 映射到 root', () => {
-    const p = { id: 'p', ui: { host: () => 'HOST' } } as unknown as CoEditorPlugin
-    expect(resolveRenderer(p, 'root')!(null, {} as never)).toBe('HOST')
-  })
-
-  it('slots 优先于 settings.trigger（topbar-settings）', () => {
-    const p = {
-      id: 'p',
-      settings: { trigger: () => 'TRIGGER' },
-      ui: { slots: { 'topbar-settings': () => 'SLOT' } },
-    } as unknown as CoEditorPlugin
-    expect(resolveRenderer(p, 'topbar-settings')!(null, ctx)).toBe('SLOT')
-  })
-
-  it('无 slots 时 settings.trigger 映射到 topbar-settings 并传入 open', () => {
-    const open = () => 'OPENED'
-    const p = {
-      id: 'p',
-      settings: { trigger: (c: { open: () => string }) => `TRIGGER:${c.open()}` },
-    } as unknown as CoEditorPlugin
-    const render = resolveRenderer(p, 'topbar-settings')!
-    const out = render(null, { open } as unknown as SlotCtxMap['topbar-settings'])
-    expect(out).toBe('TRIGGER:OPENED')
+describe('resolveRenderer', () => {
+  it('ui.slots 命中返回渲染函数', () => {
+    const p = { id: 'p', ui: { slots: { [slot]: () => 'X' } } } as unknown as CoEditorPlugin
+    expect(resolveRenderer(p, slot)).toBeDefined()
   })
 
   it('无任何实现时返回 undefined', () => {
     const p = { id: 'p' } as CoEditorPlugin
     expect(resolveRenderer(p, 'root')).toBeUndefined()
-    expect(resolveRenderer(p, 'editor-bottom')).toBeUndefined()
+    expect(resolveRenderer(p, 'editorpanel/footbar/right')).toBeUndefined()
   })
 
-  it('root 与 topbar-settings 之外无别名', () => {
+  it('不再支持 ui.host / settings.trigger 兼容别名', () => {
     const p = {
       id: 'p',
       ui: { host: () => 'HOST' },
       settings: { trigger: () => 'TRIGGER' },
     } as unknown as CoEditorPlugin
-    expect(resolveRenderer(p, 'editor-bottom')).toBeUndefined()
-    expect(resolveRenderer(p, 'sidebar-bottom')).toBeUndefined()
+    expect(resolveRenderer(p, 'root')).toBeUndefined()
+    expect(resolveRenderer(p, 'main.head.right')).toBeUndefined()
   })
 })

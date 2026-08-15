@@ -18,11 +18,17 @@
 - 构建：`build:h5`（产物 dist-h5）/ `build:weapp`（产物 dist-weapp），小程序用微信开发者工具导入
 - 后端地址约定：前端始终用相对路径 `/api/*`，由部署方保证同域或反代，不做编译时注入
 
-## 前端插件机制
+## 前端插件机制与布局骨架
 
-核心编辑器保持精简，一切非核心能力以插件形式提供，编译时注入（Taro alias `@plugin-registry`，可用 `PLUGIN_REGISTRY_PATH` 环境变量替换注册表文件）。
+页面骨架定死（三端一致），UI 是内置默认实现，插件通过**区块 bar 网格插槽**扩展。
 
-- 插件接口（`src/plugin/types.ts`）：按主体分组（`app.onInit` 启动钩子 / `settings.menuItems` 结构化菜单项 / `user.get` 用户信息 / `i18n` 文案字典 / **`ui.slots` 区块插槽**——topbar/sidebar/editor/ai 四区块的外围上下左右共 11 个命名插槽，链式装饰模型，中间核心区不开给插件；`settings.trigger`、`ui.host` 为兼容别名）
-- 内置插件（`src/plugins/`）：`api-config`（设置菜单 → API 配置弹窗）、`user`（固定返回 default-user）
-- 设置下拉菜单（`components/settings/SettingsMenu.tsx`）：审阅风格 radio（核心功能，非插件）+ 插件贡献的菜单项
+- **布局骨架**（`src/plugin/LayoutShell.tsx`）：topbar/bottombar 通栏 + 主区（宽屏 sidebar|editor|ai 三栏并排、editor/ai 可拖拽；窄屏 editor 上 ai 下、sidebar 变浮层）；sidebar 折叠状态由骨架持有（`LayoutContext`，`useLayout()` 消费）；`content` prop 供无区块页面（文档列表）使用
+- **插槽网格**（`src/plugin/types.ts`）：24 个 bar 插槽 = 8 区块位（topbar/bottombar 通栏 + sidebar/editorpanel/aipanel 各自的 topbar/bottombar）× 左/中/右；**body 不开放**（编辑器/气泡为内置内容）；`root`、`settings-menu` 保留。插槽为链式装饰模型（`SlotHost`/`slot-core.ts`）
+- **插件接口**：`app.onInit` / `settings.menuItems` / `user.get` / `i18n` / `request.getHeaders·onResponse` / `ui.slots`
+- **事件总线**（`src/plugin/bus.ts`）：自研无依赖 `bus.on/off/emit`，事件名约定 `pluginId:事件名`
+- **状态只读约定（君子协定）**：插槽 ctx 中 `readonly` 字段仅可读，变更走 ctx 回调或事件总线
+- 区块默认内容：topbar/left（展开按钮+logo+title+面包屑）、topbar/right（设置按钮）、sidebar/topbar/right（关闭按钮）、editorpanel/bottombar/right（保存+审阅）、aipanel/bottombar/middle+right（输入框+发送按钮）
+- 内置插件（`src/plugins/`）：`api-config`、`user`
+- 设置下拉菜单（`components/settings/SettingsMenu.tsx`）：审阅风格 radio（核心，非插件）+ 插件菜单项
 - 详细文档见 docs/plugin.md
+

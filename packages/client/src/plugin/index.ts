@@ -5,12 +5,7 @@ import type { CoEditorPlugin, UserInfo } from './types'
 
 export type {
   CoEditorPlugin, PluginMenuItem, RadioOption, UserInfo, LocalizedLabel,
-  PluginSlot, SlotCtxMap, SlotRenderer, RpcResponse,
-  TopbarLeftCtx, TopbarRightCtx, TopbarSettingsCtx,
-  SidebarTopCtx, SidebarBottomCtx,
-  EditorTopCtx, EditorBottomCtx,
-  AiTopCtx, AiBottomCtx,
-  SettingsMenuCtx, RootCtx,
+  PluginSlot, SlotCtxMap, SlotCtx, SlotRenderer, RpcResponse,
 } from './types'
 
 export function getPlugins(): CoEditorPlugin[] {
