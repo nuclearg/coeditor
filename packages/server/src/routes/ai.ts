@@ -61,7 +61,6 @@ const aiChatSchema = z.object({
     role: z.enum(['user', 'assistant', 'system']),
     content: z.string().max(50000),
   })).min(1).max(30),
-  model: z.string().max(200).optional(),
   reviewType: z.enum(REVIEW_TYPES).optional(),
   reviewFocus: z.enum(['plot', 'character']).optional(),
   contentContext: z.string().max(200000).optional(),
@@ -178,7 +177,7 @@ app.post('/api/ai.chat', async (c) => {
   const userMessages = body.messages.filter((m) => m.role !== 'system')
   const messages = [{ role: 'system', content: systemContent }, ...userMessages]
 
-  const model = body.model || settings.model
+  const model = settings.model
 
   // No longer tied to the client's abort signal: the response is persisted
   // server-side even if the browser disconnects mid-stream. The only way to
