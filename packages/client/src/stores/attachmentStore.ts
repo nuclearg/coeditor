@@ -47,7 +47,7 @@ export const useAttachmentStore = create<AttachmentStore>((set, get) => ({
       set((s) => {
         if (s.docId !== docId) return {}
         const attachments: Record<string, Attachment> = {}
-        for (const a of atts) attachments[a.id] = a
+        for (const a of atts) attachments[a.type] = a
         return { attachments }
       })
     } catch (err) {

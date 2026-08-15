@@ -156,7 +156,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const sendRequest = async (
     args:
       | { kind: 'message'; question: string; hideQuestion?: boolean; targetConvId?: string; focus?: string; review?: boolean }
-      | { kind: 'retry'; turnId: string },
+      | { kind: 'retry'; turnId: string; focus?: string; review?: boolean },
   ) => {
     if (sendingRef.current) return
     if (args.kind === 'message' && !args.question.trim()) return
@@ -220,7 +220,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           answerId,
           messages: history,
           reviewType,
-          reviewFocus: args.kind === 'message' ? args.focus : undefined,
+          reviewFocus: args.focus,
           contentContext: currentContent,
         },
         {
@@ -250,7 +250,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
         setStreamContent('')
         setThinkingContent('')
         // 审阅流结束/失败事件（插件据此复位 UI 状态，docs/plugin-v2.md §5）
-        if (args.kind === 'message' && args.review) {
+        if (args.review) {
           bus.emit(reviewFailed ? 'review:failed' : 'review:completed', { turnId, focus: args.focus })
         }
       }
@@ -303,12 +303,14 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     if (autoSubmit && !autoSubmitLock.current) {
       // 流式进行中，不重复提交，直接完成
       if (sendingRef.current) {
+        bus.emit('review:failed', {})
         onAutoSubmitDone?.()
         return
       }
       // No draft content to review — complete immediately so the review
       // button never gets stuck in a pending state.
       if (!currentContentRef.current) {
+        bus.emit('review:failed', {})
         onAutoSubmitDone?.()
         return
       }
@@ -328,7 +330,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
             await sendMessage(question, true, conv.id, focus, true)
           } else if (currentTurns.length > 0) {
             const lastTurn = currentTurns[currentTurns.length - 1]
-            await handleRetry(lastTurn.id)
+            await handleRetry(lastTurn.id, focus, true)
           } else {
             setActiveConvId(currentConvId)
             await sendMessage(question, true, currentConvId, focus, true)
@@ -349,7 +351,8 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSubmit])
 
-  const handleRetry = (turnId: string) => sendRequest({ kind: 'retry', turnId })
+  const handleRetry = (turnId: string, focus?: string, review?: boolean) =>
+    sendRequest({ kind: 'retry', turnId, focus, review })
 
   // Stable handler refs for memoized turn rows: handleRetry's closure changes
   // every render, but rows only need "retry this turn" semantics.

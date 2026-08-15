@@ -24,9 +24,10 @@ export interface DocumentTemplate {
   attachments: AttachmentDef[]
 }
 
-/** 文档附件（本期一个类型恰好一个，id === type） */
+/** 文档附件：id 为数字主键字符串，type 为业务类型 key（同文档内唯一） */
 export interface Attachment {
   id: string
+  type: string
   documentId: string
   name: string
   /** 当前激活草稿；无草稿时为 null */

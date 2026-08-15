@@ -63,6 +63,7 @@ const aiChatSchema = z.object({
   })).min(1).max(30),
   model: z.string().max(200).optional(),
   reviewType: z.enum(REVIEW_TYPES).optional(),
+  reviewFocus: z.enum(['plot', 'character']).optional(),
   contentContext: z.string().max(200000).optional(),
 })
 
@@ -162,6 +163,13 @@ app.post('/api/ai.chat', async (c) => {
     systemContent = prompts.chapterReview + (body.contentContext ? `\n\n${body.contentContext}` : '')
   } else if (body.reviewType === 'fulltext') {
     systemContent = prompts.fulltextReview + (body.contentContext ? `\n\n${body.contentContext}` : '')
+  }
+
+  // 审阅维度：与 Java 后端对齐，注入聚焦指令
+  if (body.reviewFocus === 'plot') {
+    systemContent += '\n\n请重点审阅剧情逻辑、伏笔、节奏和结构。'
+  } else if (body.reviewFocus === 'character') {
+    systemContent += '\n\n请重点审阅人物弧光、动机、行为一致性和成长线。'
   }
 
   // Build messages array WITHOUT mutating the original.

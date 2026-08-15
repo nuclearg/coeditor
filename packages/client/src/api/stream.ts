@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro'
 import { isH5 } from '@/lib/utils'
 import { t } from '@/lib/i18n'
-import { buildHeaders } from './client'
+import { buildHeaders, notifyResponse } from './client'
 
 // === SSE streaming helper — dual-platform ===
 
@@ -68,9 +68,10 @@ async function streamH5(
 
   const contentType = res.headers.get('content-type') || ''
   if (contentType.includes('application/json')) {
-    const result = await res.json()
-    if (!result.success) {
-      callbacks.onError(result.error || t('error.requestFailed'))
+    const result = await res.json() as { success?: boolean; error?: string }
+    if (result.success === false) {
+      const handled = await notifyResponse({ success: false, error: result.error, action: 'ai.chat' })
+      if (!handled) callbacks.onError(result.error || t('error.requestFailed'))
     }
     return { content: '', thinking: '' }
   }
@@ -148,7 +149,7 @@ async function streamWeapp(
       data: params,
       header: headers,
       enableChunked: true,
-      success: (res: { data: unknown; statusCode?: number }) => {
+      success: async (res: { data: unknown; statusCode?: number }) => {
         // 非 200 状态码（限流/500 等）
         if (res.statusCode && res.statusCode !== 200) {
           callbacks.onError(`${t('error.requestFailed')} (${res.statusCode})`)
@@ -158,7 +159,10 @@ async function streamWeapp(
         // Non-streaming JSON error responses (rate limit, validation, no API key)
         if (res.data && typeof res.data === 'object' && !ArrayBuffer.isView(res.data)) {
           const body = res.data as { success?: boolean; error?: string }
-          if (body.success === false) callbacks.onError(body.error || t('error.requestFailed'))
+          if (body.success === false) {
+            const handled = await notifyResponse({ success: false, error: body.error, action: 'ai.chat' })
+            if (!handled) callbacks.onError(body.error || t('error.requestFailed'))
+          }
         }
         finish(state.content, state.thinking)
       },

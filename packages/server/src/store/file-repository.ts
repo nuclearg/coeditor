@@ -424,14 +424,18 @@ class FileAttachmentRepo implements AttachmentRepo {
     if (!doc) return []
 
     const attachments = (await Promise.all(
-      (doc.attachmentOrder || []).map((type) => readJSONOrNull<Attachment>(attachmentFilePath(userId, docId, type)))
+      (doc.attachmentOrder || []).map(async (type) => {
+        const att = await readJSONOrNull<Attachment>(attachmentFilePath(userId, docId, type))
+        return att ? { ...att, type } : null
+      })
     )).filter(Boolean) as Attachment[]
 
     return attachments
   }
 
   async get(userId: string, docId: string, type: string): Promise<Attachment | null> {
-    return readJSONOrNull<Attachment>(attachmentFilePath(userId, docId, type))
+    const att = await readJSONOrNull<Attachment>(attachmentFilePath(userId, docId, type))
+    return att ? { ...att, type } : null
   }
 
   async ensure(userId: string, docId: string, type: string, name: string): Promise<Attachment> {
@@ -451,7 +455,7 @@ class FileAttachmentRepo implements AttachmentRepo {
           await writeJSON(docFile, doc)
         }
       }
-      return existing
+      return { ...existing, type }
     }
 
     const docFile = documentPath(userId, docId)
@@ -461,7 +465,7 @@ class FileAttachmentRepo implements AttachmentRepo {
     if (!doc) throw new Error('文档不存在')
 
     const draftId = generateId()
-    const attachment: Attachment = { id: type, documentId: docId, name, currentDraftId: draftId, createdAt: new Date().toISOString() }
+    const attachment: Attachment = { id: type, type, documentId: docId, name, currentDraftId: draftId, createdAt: new Date().toISOString() }
     await writeFile(attachmentDraftMdPath(userId, docId, type, draftId), '')
     await writeJSON(filePath, attachment)
 

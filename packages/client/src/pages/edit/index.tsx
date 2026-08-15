@@ -1,6 +1,6 @@
 import { View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Dialog } from '@/components/ui/Dialog'
@@ -100,9 +100,13 @@ export default function DocumentEditPage() {
 
   // Submit for AI review：订阅 startReview（公开 action，docs/plugin-v2.md §4）。
   // 流程保持：先保存（失败即止），再走 AiPanel autoSubmit 链路。
+  // 必须边沿触发：seq 是模块级单例且只增不减，若不记录已消费值，
+  // 首次审阅后的任何 dirty/doSave 变化都会再次触发幽灵审阅。
   const reviewSeq = useReviewStore((s) => s.seq)
+  const lastReviewSeqRef = useRef(0)
   useEffect(() => {
-    if (reviewSeq === 0 || !docId) return
+    if (reviewSeq === 0 || reviewSeq === lastReviewSeqRef.current || !docId) return
+    lastReviewSeqRef.current = reviewSeq
     const run = async () => {
       if (dirty) {
         const saved = await doSave()

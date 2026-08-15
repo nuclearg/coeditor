@@ -34,7 +34,7 @@ export async function buildHeaders(): Promise<Record<string, string>> {
  * Notify plugins of a parsed RPC response. If any plugin returns true the
  * framework considers the response "handled" (e.g. plugin redirected to login).
  */
-async function notifyResponse(resp: RpcResponse): Promise<boolean> {
+export async function notifyResponse(resp: RpcResponse): Promise<boolean> {
   for (const plugin of getPlugins()) {
     if (plugin.request?.onResponse) {
       const handled = await plugin.request.onResponse(resp)
