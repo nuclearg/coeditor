@@ -238,8 +238,10 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
         controller.signal,
       )
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') return
       reviewFailed = true
+      // 中止（用户停止/上下文切换/离开页面）同样不是正常完成，
+      // finally 里按 review:failed 通知插件复位，避免误报 completed
+      if (err instanceof Error && err.name === 'AbortError') return
       const msg = err instanceof Error ? err.message : t("ai.requestFailed")
       setError(msg || t("error.aiRequest"))
     } finally {

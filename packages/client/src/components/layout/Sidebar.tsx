@@ -68,7 +68,6 @@ export const Sidebar = memo(function Sidebar({
   onSelectAttachment,
   onSelectFullText,
 }: SidebarProps) {
-  const toggleSidebar = useLayoutStore((s) => s.toggleSidebar)
   const closeSidebar = useLayoutStore((s) => s.closeSidebar)
   const { chapters, createChapter, deleteChapter, updateChapter, reorderChapters } = useChapterStore()
   const { paragraphsByChapter, loadParagraphs, createParagraph, deleteParagraph, updateParagraphName, reorderParagraphs } = useParagraphStore()

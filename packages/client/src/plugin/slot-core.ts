@@ -1,4 +1,4 @@
-import { Fragment, isValidElement, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { CoEditorPlugin, PluginSlot, SlotCtxMap, SlotRenderer } from './types'
 
 /**

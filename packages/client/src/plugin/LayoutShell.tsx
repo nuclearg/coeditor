@@ -3,13 +3,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ResizablePanel } from '@/components/ui/Resizable'
 import { SettingsMenu } from '@/components/settings/SettingsMenu'
 import { SlotHost } from '@/plugin/SlotHost'
-import { getCurrentUser } from '@/plugin'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useIsMobile } from '@/hooks'
 import { isH5 } from '@/lib/utils'
 import { getStorage, setStorage } from '@/lib/storage'
 import logo from '@/assets/logo.png'
-import type { UserInfo } from '@/plugin'
 
 /** sidebar 宽度（PC 宽屏展开时）；与 Sidebar 组件内部 width 保持一致 */
 const SIDEBAR_WIDTH = isH5() ? 260 : 420
@@ -44,7 +42,6 @@ interface LayoutShellProps {
 
 export function LayoutShell({ sidebar, editor, ai, home, content, footer, children }: LayoutShellProps) {
   const isMobile = useIsMobile()
-  const [user, setUser] = useState<UserInfo | null>(null)
   const [resizing, setResizing] = useState(false)
   const sidebarOpen = useLayoutStore((s) => s.sidebarOpen)
   const breadcrumb = useLayoutStore((s) => s.breadcrumb)
@@ -52,10 +49,6 @@ export function LayoutShell({ sidebar, editor, ai, home, content, footer, childr
   useEffect(() => {
     useLayoutStore.getState().setSidebarOpen(!isMobile)
   }, [isMobile])
-
-  useEffect(() => {
-    getCurrentUser().then(setUser)
-  }, [])
 
   // sidebar 宽度：仅 H5 宽屏可拖拽调整（持久化）；其余场景用固定宽度
   const [sidebarWidth, setSidebarWidth] = useState(() => {

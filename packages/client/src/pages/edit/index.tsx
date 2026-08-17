@@ -102,8 +102,14 @@ export default function DocumentEditPage() {
   // 流程保持：先保存（失败即止），再走 AiPanel autoSubmit 链路。
   // 必须边沿触发：seq 是模块级单例且只增不减，若不记录已消费值，
   // 首次审阅后的任何 dirty/doSave 变化都会再次触发幽灵审阅。
+  // 基线还必须随挂载/换文档对齐到当前 seq：否则上一篇文档遗留的 seq
+  // 会在进入新文档时立即消费，造成换文档即自动发起幽灵审阅。
   const reviewSeq = useReviewStore((s) => s.seq)
-  const lastReviewSeqRef = useRef(0)
+  const lastReviewSeqRef = useRef(useReviewStore.getState().seq)
+  useEffect(() => {
+    // 页面实例跨文档复用时，旧文档签发的审阅信号不得被新文档消费
+    lastReviewSeqRef.current = useReviewStore.getState().seq
+  }, [docId])
   useEffect(() => {
     if (reviewSeq === 0 || reviewSeq === lastReviewSeqRef.current || !docId) return
     lastReviewSeqRef.current = reviewSeq
