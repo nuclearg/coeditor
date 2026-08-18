@@ -22,6 +22,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const settings = await api.rpc<AppSettings>('settings.get')
       set({ style: settings.style, loaded: true })
     } catch (err) {
+      // 插件已处理（如登录门拦截 401）：静默，不打印噪音
+      if ((err as Error)?.name === 'PluginHandled') return
       console.error('[settingsStore] loadStyle failed', err)
     }
   },

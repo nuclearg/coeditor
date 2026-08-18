@@ -22,6 +22,8 @@ export const useDocumentStore = create<DocumentStore>((set) => ({
       const docs = await api.rpc<Document[]>('documents.list')
       set({ documents: docs })
     } catch (err) {
+      // 插件已处理（如登录门拦截 401）：静默，不打印噪音
+      if ((err as Error)?.name === 'PluginHandled') return
       console.error('[loadDocuments]', err)
       throw err
     } finally {

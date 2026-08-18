@@ -33,6 +33,8 @@ export const useAttachmentStore = create<AttachmentStore>((set, get) => ({
       const templates = await api.rpc<DocumentTemplate[]>('templates.list')
       set({ templates })
     } catch (err) {
+      // 插件已处理（如登录门拦截 401）：静默，不打印噪音
+      if ((err as Error)?.name === 'PluginHandled') return
       console.error('[loadTemplates]', err)
       throw err
     }
