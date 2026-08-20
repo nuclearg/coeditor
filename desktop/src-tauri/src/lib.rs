@@ -47,8 +47,8 @@ pub fn run() {
 
                 app.manage(SidecarState(Mutex::new(Some(child))));
 
-                std::thread::spawn(move || {
-                    while let Some(event) = rx.recv() {
+                tauri::async_runtime::spawn(async move {
+                    while let Some(event) = rx.recv().await {
                         match event {
                             CommandEvent::Error(e) => eprintln!("[sidecar] {e}"),
                             CommandEvent::Terminated(p) => {

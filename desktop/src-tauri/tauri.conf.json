@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "net.coeditor.lite.desktop",
   "build": {
-    "beforeDevCommand": "bash ../scripts/dev.sh",
+    "beforeDevCommand": "bash scripts/dev.sh",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "bash ../build-desktop.sh",
+    "beforeBuildCommand": "bash build-desktop.sh",
     "frontendDist": "../../packages/client/dist-h5"
   },
   "app": {
