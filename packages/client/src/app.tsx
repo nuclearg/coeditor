@@ -5,6 +5,7 @@ import { runInit, mergePluginDictionaries } from '@/plugin'
 import { SlotHost } from '@/plugin/SlotHost'
 import { useTheme } from '@/stores/theme'
 import { cn, isH5 } from '@/lib/utils'
+import { initDesktopAdapters } from '@/lib/desktop'
 import { t } from '@/lib/i18n'
 
 // H5 端使用 web 尺寸覆盖层（小程序保留移动端尺寸）
@@ -89,6 +90,8 @@ function App({ children }: PropsWithChildren) {
   useLaunch(() => {
     mergePluginDictionaries()
     runInit().catch((err) => console.error('[app] runInit failed', err))
+    // 桌面壳（Tauri）适配：WebView 内激活 window.open 重定向，其余平台无操作
+    initDesktopAdapters().catch((err) => console.error('[app] desktop adapters failed', err))
   })
 
   // 主题 class 由根 View 驱动（.app.dark），H5 与小程序一致

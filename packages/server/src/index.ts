@@ -4,6 +4,8 @@ import { cors } from 'hono/cors'
 import { bodyLimit } from 'hono/body-limit'
 import { HTTPException } from 'hono/http-exception'
 import { serve } from '@hono/node-server'
+import { readFile, stat } from 'node:fs/promises'
+import path from 'node:path'
 import documents from './routes/documents.js'
 import chapters from './routes/chapters.js'
 import paragraphs from './routes/paragraphs.js'
@@ -72,6 +74,59 @@ app.route('/', settings)
 console.log(`[coeditor] DATA_ROOT: ${DATA_ROOT}`)
 
 await repo.initialize()
+
+// ---- 桌面壳静态服务（可选）----
+// 设置 COEDITOR_WEB_ROOT 时，额外托管该目录（H5 产物 dist-h5）：
+// GET / 返回 index.html，其余按路径返回静态文件。
+// 桌面壳（desktop/）用它实现"单端口同源"：窗口直连 http://127.0.0.1:<port>/，
+// 页面与 /api/* 同源，无 CORS、无跨源 localStorage。
+// 未设置时行为与之前完全一致（纯 API 服务，配合 Nginx 部署）。
+const WEB_ROOT = process.env.COEDITOR_WEB_ROOT
+  ? path.resolve(process.env.COEDITOR_WEB_ROOT)
+  : undefined
+
+const STATIC_MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.eot': 'application/vnd.ms-fontobject',
+  '.map': 'application/json',
+}
+
+if (WEB_ROOT) {
+  app.get('*', async (c) => {
+    const url = new URL(c.req.url)
+    const rel = url.pathname === '/' ? 'index.html' : url.pathname.replace(/^\/+/, '')
+    const filePath = path.join(WEB_ROOT, rel)
+    // 路径穿越防护：解析结果必须仍在 WEB_ROOT 内
+    if (filePath !== WEB_ROOT && !filePath.startsWith(WEB_ROOT + path.sep)) {
+      return c.text('Not Found', 404)
+    }
+    try {
+      const s = await stat(filePath)
+      if (!s.isFile()) return c.text('Not Found', 404)
+      const ext = path.extname(filePath).toLowerCase()
+      c.header('Content-Type', STATIC_MIME[ext] || 'application/octet-stream')
+      // 桌面壳场景文件不变，html 不缓存、带 hash 的资源长缓存
+      c.header('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable')
+      return c.body(await readFile(filePath))
+    } catch {
+      return c.text('Not Found', 404)
+    }
+  })
+}
 
 export default app
 
