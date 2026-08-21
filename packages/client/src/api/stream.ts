@@ -28,8 +28,10 @@ interface StreamParams {
  */
 function handleSseLine(line: string, state: { content: string; thinking: string }, callbacks: StreamCallbacks): boolean {
   const trimmed = line.trim()
-  if (!trimmed || !trimmed.startsWith('data: ')) return true
-  const data = trimmed.slice(6)
+  // SSE data 行兼容两种格式：`data: xxx`（Hono/开源版，冒号后有空格）与
+  // `data:xxx`（Spring SseEmitter/Java 版，无空格）——slice(5) 后统一 trim
+  if (!trimmed || !trimmed.startsWith('data:')) return true
+  const data = trimmed.slice(5).trim()
   if (data === '[DONE]') return false
   try {
     const parsed = JSON.parse(data)
