@@ -127,6 +127,159 @@
   margin-bottom: 6px;
 }
 
+// ===== 首页（作品列表） =====
+// H5 窄屏：宽度占满；PC（≥1024px，与 useIsMobile 断点一致）：
+// 宽度对齐编辑页 AI 面板默认宽度（主区剩余 50%，主区 = 屏宽 - sidebar 260px）
+.home-page {
+  width: 100%;
+  max-width: 1280px;
+  padding: 28px 24px 48px;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .home-page {
+    max-width: calc((100vw - 260px) / 2);
+  }
+}
+
+.home-header {
+  margin-bottom: 20px;
+}
+
+.home-eyebrow {
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.home-title {
+  font-size: 26px;
+}
+
+.home-count {
+  font-size: 12px;
+  padding: 4px 14px;
+}
+
+.create-card {
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.create-card-title {
+  font-size: 16px;
+}
+
+.create-card-hint {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.create-hint {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+// 全部作品卡片（与创建卡片同款）
+.works-card {
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.works-card-title {
+  font-size: 16px;
+}
+
+// 模板下拉（自绘面板）
+.template-options {
+  top: calc(100% + 4px);
+  max-height: 240px;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.template-option {
+  gap: 8px;
+  padding: 9px 10px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+// 模板描述（markdown）
+.template-desc {
+  margin-top: 10px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.template-desc-line {
+  margin-bottom: 4px;
+}
+
+.doc-card {
+  gap: 12px;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  &:hover {
+    border-color: var(--accent-warm);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.doc-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+}
+
+.doc-title {
+  font-size: 15px;
+}
+
+.doc-meta {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.doc-desc {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+// 桌面端悬停才显示删除按钮；触摸端（小程序）保持常显
+.doc-delete {
+  padding: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.doc-card:hover .doc-delete {
+  opacity: 1;
+}
+
+.doc-loading {
+  padding: 48px 0;
+}
+
+.empty-state {
+  padding: 56px 0 40px;
+}
+
+.empty-icon {
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 13px;
+}
+
 // ===== 对话气泡 =====
 .bubble-user,
 .bubble-ai {

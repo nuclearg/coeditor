@@ -6,12 +6,14 @@
  * Data is stored as JSON files and Markdown files in a hierarchical directory structure.
  */
 
+import fs from 'node:fs'
+import path from 'node:path'
 import type {
   Document, Chapter, Paragraph, ParagraphDraft,
   Attachment, AttachmentDraft, AiConversation, AiTurn, AiAnswer,
   AppSettings, ConversationType, DocumentTemplate,
 } from '@coeditor/shared'
-import { generateId, DEFAULT_SETTINGS, REVIEW_STYLES } from '@coeditor/shared'
+import { generateId, DEFAULT_SETTINGS } from '@coeditor/shared'
 import { USER_ID } from '../lib/utils.js'
 import {
   readJSONOrNull, readJSONOrThrow, writeJSON,
@@ -26,13 +28,13 @@ import {
   chapterDir, chapterFilePath,
   paragraphDir, paragraphFilePath, paragraphDraftMdPath,
   conversationsDir, conversationDir, conversationFilePath, turnFilePath,
-  promptFilePath,
+  DATA_ROOT, setDataRoot, defaultDataRoot, writePersistedDataDir, removePersistedDataDir,
 } from './file-paths.js'
 import type {
   Repository, DocumentRepo, ChapterRepo, ParagraphRepo,
   DraftRepo, AttachmentRepo, TemplatesRepo, ConversationRepo, TurnRepo, SettingsRepo,
-  PromptFile,
 } from './types.js'
+import { SEED_TEMPLATES } from '../seed.js'
 
 // === Utility ===
 
@@ -690,22 +692,6 @@ class FileSettingsRepo implements SettingsRepo {
     await writeJSON(filePath, updated)
     return updated
   }
-
-  async loadPrompt(style: string): Promise<PromptFile> {
-    const defaults: PromptFile = {
-      fulltextReview: '你是一位专业编辑，请审阅这整篇文章。',
-      chapterReview: '你是一位专业编辑，请审阅这个章节。',
-      attachmentReview: '你是一位专业编辑，请审阅这份设定材料。',
-      paragraphReview: '你是一位专业编辑，请审阅这段文字。',
-      casual: '你是一位专业编辑，请帮助作者完成写作。',
-    }
-    // The style comes from config.json on disk (hand-editable) — validate it
-    // here too, not only at the HTTP boundary, and fall back to 'gentle'.
-    const safeStyle = (REVIEW_STYLES as readonly string[]).includes(style) ? style : 'gentle'
-    const filePath = promptFilePath(safeStyle)
-    const data = await readJSONOrNull<Partial<PromptFile>>(filePath)
-    return { ...defaults, ...data }
-  }
 }
 
 // === FileRepository (aggregate) ===
@@ -725,6 +711,8 @@ export class FileRepository implements Repository {
    * Initialize the file-based storage:
    * 1. Ensure user directory exists
    * 2. Ensure default config file exists
+   * 3. 首次运行种子化：数据目录缺 templates/prompts 时写入内置种子（seed.ts，
+   *    构建时内联，开箱即用；只补缺失文件，不覆盖已有内容）
    */
   async initialize(): Promise<void> {
     const userId = USER_ID
@@ -735,10 +723,79 @@ export class FileRepository implements Repository {
     if (!(await exists(configFile))) {
       await writeJSON(configFile, DEFAULT_SETTINGS)
     }
+
+    // 内置模板种子
+    for (const [id, template] of Object.entries(SEED_TEMPLATES)) {
+      const file = templateFilePath(id)
+      if (!(await exists(file))) await writeJSON(file, template)
+    }
+
+    // 仍缺 templates 时给出引导提示（内置种子已覆盖，仅自定义场景兜底）
+    await ensureDir(templatesDir())
+    const templates = await listDir(templatesDir()).catch(() => [] as string[])
+    if (!templates.some((f) => f.endsWith('.json'))) {
+      console.warn(
+        `[coeditor] 数据目录 ${DATA_ROOT} 缺少 templates/（文档模板）。` +
+          '内置种子已提供默认模板；如需自定义模板，可自行放入该目录。',
+      )
+    }
   }
 
-  /** Load prompt file (convenience method for AI routes) */
-  async loadPrompt(style: string): Promise<PromptFile> {
-    return this.settings.loadPrompt(style)
+  /**
+   * 运行时切换数据根目录（settings.update 的 dataDir 字段）：
+   * - 把 templates 种子迁移到新目录（目录缺失或为空时从旧目录复制）
+   * - 切换内存中的 DATA_ROOT（所有路径函数调用时读取，立即生效）
+   * - 重建用户目录/默认配置
+   * - 持久化偏好：仅当用户手工改成**非平台默认**目录时才写配置文件；
+   *   改回平台默认目录则删除配置文件（默认目录无需指针也能解析，保持系统干净）
+   */
+  async switchDataDir(newRoot: string): Promise<void> {
+    const prevRoot = DATA_ROOT
+    const nextRoot = path.resolve(newRoot)
+    if (nextRoot === prevRoot) return
+
+    await migrateSeedDir(prevRoot, nextRoot, 'templates')
+
+    setDataRoot(nextRoot)
+    await this.initialize()
+
+    if (nextRoot === path.resolve(defaultDataRoot())) {
+      await removePersistedDataDir()
+    } else {
+      await writePersistedDataDir(nextRoot)
+    }
+  }
+}
+
+/** 把 srcRoot/<sub> 目录内容复制到 dstRoot/<sub>（新目录缺失或为空时） */
+async function migrateSeedDir(srcRoot: string, dstRoot: string, sub: string): Promise<void> {
+  const srcDir = path.join(srcRoot, sub)
+  const dstDir = path.join(dstRoot, sub)
+  if (await exists(dstDir)) {
+    const existing = await listDir(dstDir).catch(() => [] as string[])
+    if (existing.length > 0) return
+  }
+  await ensureDir(dstDir)
+  if (!(await exists(srcDir))) return
+  const entries = await listDir(srcDir)
+  for (const entry of entries) {
+    const from = path.join(srcDir, entry)
+    const to = path.join(dstDir, entry)
+    const st = await fs.promises.stat(from)
+    if (st.isDirectory()) await copyDirRecursive(from, to)
+    else await fs.promises.copyFile(from, to)
+  }
+}
+
+/** 递归复制目录（文件与子目录） */
+async function copyDirRecursive(src: string, dst: string): Promise<void> {
+  await ensureDir(dst)
+  const entries = await listDir(src)
+  for (const entry of entries) {
+    const from = path.join(src, entry)
+    const to = path.join(dst, entry)
+    const st = await fs.promises.stat(from)
+    if (st.isDirectory()) await copyDirRecursive(from, to)
+    else await fs.promises.copyFile(from, to)
   }
 }

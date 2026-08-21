@@ -234,7 +234,7 @@ CoEditor 后端 HTTP API 完整文档。基于 `packages/server/src/routes/*` �
 ## 5. 模板 templates
 
 ### `POST /api/templates.list`
-列出全部文档模板（从 `data/templates/*.json` 加载）。
+列出全部文档模板（从数据目录 `templates/*.json` 加载，首次运行由内置资源 `resources/templates/` 种子化）。
 
 - 请求：`{}`
 - 响应：`DocumentTemplate[]`
@@ -417,14 +417,13 @@ CoEditor 后端 HTTP API 完整文档。基于 `packages/server/src/routes/*` �
     { "role": "user|assistant|system", "content": "string ≤200000" }
   ],
   "model?": "string",                          // 缺省用设置中的模型
-  "reviewType?": "paragraph|attachment|chapter|fulltext|casual",
-  "contentContext?": "string ≤500000"          // 审阅上下文（附件/章节/段落内容）
+  "reviewType?": "paragraph|attachment|chapter|fulltext|casual"
 }
 ```
 
 服务端行为：
 
-1. 按 `reviewType` 注入系统 prompt（来自 `data/prompts/{style}.json`），**丢弃客户端传入的 system 消息**（防注入）
+1. 按 `reviewType` + 审阅风格从**模板内置 prompts**选取并渲染 `${}` 变量（附件/全文/章节/段落/段落前文），**丢弃客户端传入的 system 消息**（防注入）
 2. 调用 `{apiBaseUrl}/chat/completions`（OpenAI 兼容，`stream: true`）
 3. **流式过程中节流（1s）将累积内容持久化到 turn 的 answer**（固定 `answerId` 原地更新）
 4. **客户端断开不影响持久化**——后端继续读完 upstream 响应并完整落盘；只有 `ai.cancel` 才会中止
@@ -487,10 +486,8 @@ SSE 事件（`data: <json>`）：
 
 ```
 data/
-├── prompts/                        # AI 审阅 prompt 模板（按风格）
-│   ├── gentle.json  strict.json  praise.json
-├── templates/                      # 文档模板（定义附件种类）
-│   └── novel.json
+├── templates/                      # 文档模板（定义附件种类 + 内置审阅 prompt）
+│   ├── novel.json  essay.json
 ├── users/
 │   └── default_user/
 │       ├── config.json             # AppSettings（含明文 API Key！）

@@ -61,7 +61,7 @@ describe('主题与语言切换', () => {
   it('切换语言后菜单标签翻译生效', async () => {
     useI18nStore.setState({ language: 'zh' })
     await act(async () => {
-      root.render(<SettingsMenu />)
+      root.render(<SettingsMenu showReviewStyle />)
     })
     await act(async () => {
       const span = [...container.querySelectorAll('span')].find((el) => el.textContent === '⚙')!
@@ -78,6 +78,23 @@ describe('主题与语言切换', () => {
 
     expect(container.textContent).toContain('Review Style')
     expect(container.textContent).toContain('Gentle')
+  })
+
+  it('非编辑页（showReviewStyle=false）不显示审阅风格选项', async () => {
+    useI18nStore.setState({ language: 'zh' })
+    await act(async () => {
+      root.render(<SettingsMenu />)
+    })
+    await act(async () => {
+      const span = [...container.querySelectorAll('span')].find((el) => el.textContent === '⚙')!
+      Simulate.click(span.parentElement!)
+    })
+    // 审阅风格（严厉/温和/鼓励）不出现
+    expect(container.textContent).not.toContain('审阅风格')
+    expect(container.textContent).not.toContain('温和')
+    // 主题、语言等通用设置仍然可见
+    expect(container.textContent).toContain('主题')
+    expect(container.textContent).toContain('语言')
   })
 
   it('切换主题后 store 状态更新', async () => {

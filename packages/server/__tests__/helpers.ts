@@ -7,8 +7,8 @@ import type { Hono } from 'hono'
 // imports app modules — DATA_ROOT is resolved at module-load time.
 const TEST_DIR = process.env.COEDITOR_DATA_DIR as string
 
-// 测试数据目录：复制随仓库提交的模板文件（data/templates/*.json）
-const REPO_TEMPLATES_DIR = path.resolve(import.meta.dirname, '../../../data/templates')
+// 测试数据目录：复制随包提交的模板文件（resources/templates/*.json）
+const REPO_TEMPLATES_DIR = path.resolve(import.meta.dirname, '../resources/templates')
 
 export function getTestDir() {
   return TEST_DIR

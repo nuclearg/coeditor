@@ -31,7 +31,16 @@ function resolveLabel(label: LocalizedLabel): string {
   return typeof label === 'function' ? label() : label
 }
 
-export function SettingsMenu() {
+interface SettingsMenuProps {
+  /**
+   * 是否显示「审阅风格」选项。
+   * 审阅风格只对编辑场景有意义：仅在编辑页（LayoutShell 收到 sidebar）时为 true，
+   * 首页/其他页面不渲染，避免误导。
+   */
+  showReviewStyle?: boolean
+}
+
+export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
   const { style, loadStyle, setStyle } = useSettingsStore()
   const { language, setLanguage } = useI18nStore()
   const { theme, setTheme } = useTheme()
@@ -71,17 +80,25 @@ export function SettingsMenu() {
             onClick={() => setOpen(false)}
           />
           <View className="menu-panel">
-            <View className="menu-label">{t('settings.reviewStyle')}</View>
-            {STYLE_OPTIONS.map((option) => (
-              <View
-                key={option.value}
-                className={cn('menu-radio', style === option.value && 'checked')}
-                onClick={() => setStyle(option.value)}
-              >
-                <View className="dot" />
-                <View>{option.label()}</View>
-              </View>
-            ))}
+            {/* 审阅风格：仅编辑页显示（showReviewStyle） */}
+            {showReviewStyle && (
+              <>
+                <View className="menu-label">{t('settings.reviewStyle')}</View>
+                {STYLE_OPTIONS.map((option) => (
+                  <View
+                    key={option.value}
+                    className={cn('menu-radio', style === option.value && 'checked')}
+                    onClick={() => setStyle(option.value)}
+                  >
+                    <View className="dot" />
+                    <View>{option.label()}</View>
+                  </View>
+                ))}
+                <View className="menu-sep" />
+              </>
+            )}
+
+            {/* 数据目录等扩展设置由插件提供（data-dir 插件，开源版注册；SaaS 版不注册即无此入口） */}
 
             <View className="menu-sep" />
 

@@ -322,6 +322,221 @@ page {
   &:active { background: var(--accent); }
 }
 
+// ===== 首页（作品列表） =====
+// 移动端（wxapp / H5 窄屏）：宽度占满
+.home-page {
+  width: 100%;
+  padding: 48px 40px 96px;
+  box-sizing: border-box;
+}
+
+.home-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 40px;
+}
+
+.home-eyebrow {
+  font-size: 24px;
+  color: var(--muted-fg);
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+
+.home-title {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.home-count {
+  font-size: 24px;
+  color: var(--muted-fg);
+  background: var(--muted);
+  border-radius: 999px;
+  padding: 10px 26px;
+  flex-shrink: 0;
+}
+
+.create-card {
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 48px;
+}
+
+.create-card-title {
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.create-card-hint {
+  font-size: 24px;
+  color: var(--muted-fg);
+  margin-top: 8px;
+}
+
+.create-hint {
+  font-size: 22px;
+  color: var(--muted-fg);
+  margin-top: 12px;
+}
+
+// 全部作品卡片：与创建卡片同款（标题在卡片内）
+.works-card {
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 48px;
+}
+
+.works-card-title {
+  font-size: 32px;
+  font-weight: 600;
+}
+
+// 卡片内最后一个列表项不留底部间距
+.works-card .doc-list > :last-child {
+  margin-bottom: 0;
+}
+
+// 模板下拉（自绘面板，双端一致；PC 上不再出现 wxapp 底部弹层）
+.template-picker-wrap {
+  position: relative;
+}
+
+.template-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  &.placeholder {
+    color: var(--muted-fg);
+  }
+}
+
+.template-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 800;
+  max-height: 480px;
+  overflow-y: auto;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.template-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  font-size: 26px;
+  border-radius: 8px;
+  &:active { background: var(--accent); }
+  &.checked {
+    font-weight: 600;
+    color: var(--fg);
+  }
+  &.muted {
+    color: var(--muted-fg);
+    justify-content: center;
+  }
+}
+
+// 模板描述（markdown）
+.template-desc {
+  margin-top: 16px;
+  background: var(--muted);
+  border-radius: 10px;
+  padding: 20px 24px;
+  font-size: 24px;
+  color: var(--muted-fg);
+}
+
+.template-desc-line {
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 8px;
+}
+
+.doc-card {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  &:active { background: var(--accent); }
+}
+
+.doc-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  background: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doc-title {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.doc-meta {
+  font-size: 24px;
+  color: var(--muted-fg);
+  margin-top: 8px;
+}
+
+.doc-desc {
+  font-size: 24px;
+  color: var(--muted-fg);
+  margin-top: 6px;
+}
+
+.doc-delete {
+  flex-shrink: 0;
+  padding: 16px;
+  border-radius: 10px;
+}
+
+.doc-loading {
+  display: flex;
+  justify-content: center;
+  padding: 96px 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 120px 0 80px;
+  color: var(--muted-fg);
+}
+
+.empty-icon {
+  margin-bottom: 24px;
+  opacity: 0.75;
+}
+
+.empty-text {
+  font-size: 26px;
+}
+
 // ===== 对话气泡 =====
 // box-sizing: border-box 保证 max-width 含 padding，避免窄容器下气泡总宽超 100% 撑出横向滚动条
 .bubble-user {

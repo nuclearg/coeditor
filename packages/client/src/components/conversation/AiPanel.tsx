@@ -228,7 +228,6 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           messages: history,
           reviewType,
           reviewFocus: args.focus,
-          contentContext: currentContent,
         },
         {
           onThinking: setThinkingContent,

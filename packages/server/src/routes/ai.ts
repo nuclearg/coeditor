@@ -3,11 +3,12 @@ import type { Context } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { z } from 'zod/v4'
 import type { AiAnswer } from '@coeditor/shared'
-import { generateId, REVIEW_TYPES } from '@coeditor/shared'
+import { generateId, REVIEW_TYPES, REVIEW_STYLES, type PromptScene, type ReviewStyle } from '@coeditor/shared'
 import { parseSseLine, parseSseJson, SSE_EVENT } from '@coeditor/shared/sse'
 import { defineRpc, safeId, safeTurnId } from '../lib/rpc.js'
 import { USER_ID } from '../lib/utils.js'
 import { repo } from '../store/index.js'
+import { extractVars, renderPrompt, buildPromptContext } from '../lib/prompt-context.js'
 
 // === Simple in-memory rate limiter for ai.chat ===
 const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
@@ -51,7 +52,7 @@ const app = new Hono()
 
 // Zod schema for ai.chat request body.
 // Caps are aligned with the 8MB bodyLimit: worst case
-// 30 messages × 50000 chars + 200000 context ≈ 1.7M chars (< 8MB UTF-8).
+// 30 messages × 50000 chars ≈ 1.5M chars (< 8MB UTF-8).
 const aiChatSchema = z.object({
   docId: safeId,
   convId: safeId,
@@ -63,8 +64,20 @@ const aiChatSchema = z.object({
   })).min(1).max(30),
   reviewType: z.enum(REVIEW_TYPES).optional(),
   reviewFocus: z.enum(['plot', 'character']).optional(),
-  contentContext: z.string().max(200000).optional(),
 })
+
+/**
+ * 内置默认 prompt（模板未配置对应场景/风格时的兜底）。
+ * 审阅 prompt 的主体来自模板（顶层 prompts + 附件级 prompts），
+ * 模板会按需引用 ${} 变量（附件/全文/章节/段落/段落前文）。
+ */
+const DEFAULT_PROMPTS: Record<PromptScene | 'attachment', string> = {
+  fulltext: '你是一位专业编辑，请审阅这整篇文章。',
+  chapter: '你是一位专业编辑，请审阅这个章节。',
+  paragraph: '你是一位专业编辑，请审阅这段文字。',
+  casual: '你是一位专业编辑，请帮助作者完成写作。',
+  attachment: '你是一位专业编辑，请审阅这份设定材料。',
+}
 
 // === Explicit cancellation registry ===
 // Streaming persists to the turn on the server regardless of client
@@ -150,19 +163,43 @@ app.post('/api/ai.chat', async (c) => {
     return c.json({ success: false, error: 'Turn 不存在' })
   }
 
-  const prompts = await repo.loadPrompt(settings.style || 'gentle')
-
-  // Build system prompt based on review type
-  let systemContent = prompts.casual
-  if (body.reviewType === 'paragraph') {
-    systemContent = prompts.paragraphReview + (body.contentContext ? `\n\n${body.contentContext}` : '')
-  } else if (body.reviewType === 'attachment') {
-    systemContent = prompts.attachmentReview + (body.contentContext ? `\n\n${body.contentContext}` : '')
-  } else if (body.reviewType === 'chapter') {
-    systemContent = prompts.chapterReview + (body.contentContext ? `\n\n${body.contentContext}` : '')
-  } else if (body.reviewType === 'fulltext') {
-    systemContent = prompts.fulltextReview + (body.contentContext ? `\n\n${body.contentContext}` : '')
+  // 会话归属（附件/章节/段落）决定可解析的变量上下文
+  const conv = await repo.conversations.get(USER_ID, body.docId, body.convId)
+  if (!conv) {
+    return c.json({ success: false, error: '会话不存在' })
   }
+  const doc = await repo.documents.get(USER_ID, body.docId)
+  const template = doc ? await repo.templates.get(doc.templateId) : null
+
+  // 审阅风格：settings 校验 + 回退 gentle
+  const rawStyle = settings.style || 'gentle'
+  const style = (REVIEW_STYLES as readonly string[]).includes(rawStyle) ? rawStyle : 'gentle'
+  const reviewStyle = style as ReviewStyle
+
+  // 选择 prompt 模板：附件审阅取附件级 prompts；其余取模板顶层场景 prompts；
+  // 均未配置（或空字符串）时回退内置默认文案。
+  let promptTemplate: string
+  if (body.reviewType === 'attachment' && conv.attachmentId) {
+    const def = template?.attachments.find((a) => a.type === conv.attachmentId)
+    promptTemplate = def?.prompts?.[reviewStyle]?.trim() || DEFAULT_PROMPTS.attachment
+  } else {
+    const scene: PromptScene = body.reviewType === 'paragraph' ? 'paragraph'
+      : body.reviewType === 'chapter' ? 'chapter'
+      : body.reviewType === 'fulltext' ? 'fulltext'
+      : 'casual'
+    promptTemplate = template?.prompts?.[scene]?.[reviewStyle]?.trim() || DEFAULT_PROMPTS[scene]
+  }
+
+  // 渲染 ${} 变量（模板有引用时由服务端组装上下文；无引用则原样使用）
+  const vars = extractVars(promptTemplate)
+  let systemContent = vars.length > 0
+    ? renderPrompt(promptTemplate, await buildPromptContext(vars, {
+        docId: body.docId,
+        attachmentId: conv.attachmentId,
+        chapterId: conv.chapterId,
+        paragraphId: conv.paragraphId,
+      }))
+    : promptTemplate
 
   // 审阅维度：与 Java 后端对齐，注入聚焦指令
   if (body.reviewFocus === 'plot') {

@@ -155,13 +155,13 @@ coeditor/
 │           ├── pages/       # index（文档列表）/ edit（编辑器）
 │           ├── components/  # layout / conversation / document / ui / markdown
 │           ├── plugin/      # 插件机制（编译时注入）
-│           ├── plugins/     # 内置插件（api-config / user）
+│           ├── plugins/     # 内置插件（api-config / data-dir / user）
 │           ├── stores/      # Zustand 状态管理（按领域拆分）
 │           └── hooks/       # 编辑器编排逻辑（视图模式 / 草稿管理 / 未保存守卫）
-├── data/
-│   └── prompts/         # 审阅风格 prompt 配置
 └── build.sh             # 生产构建脚本
 ```
+
+审阅 prompt 已全部内置于文档模板（`packages/server/resources/templates/*.json`：顶层 `prompts` 按场景×风格 + 附件级 `prompts`），支持 `${}` 变量（`${附件type}` / `${document}` / `${currentChapter}` / `${currentParagraph}` / `${currentChapterPrevParagraphs}`），由服务端在 `ai.chat` 时组装渲染，不再有独立的 prompts 目录。
 
 ## 部署
 
@@ -185,9 +185,11 @@ bash build.sh
 bash start.sh
 ```
 
-`start.sh` 自动将 `COEDITOR_DATA_DIR` 设为脚本所在目录下的 `./data`，然后启动 Node server（要求 Node >= 20.11）。
+`start.sh` 默认将 `COEDITOR_DATA_DIR` 设为脚本所在目录下的 `./data`；若在应用「设置 → 数据目录」中指定过其他目录（偏好持久化于平台默认数据目录内的 `data-dir.json`，即 macOS `~/Library/Application Support/coeditor/data-dir.json`、Linux `~/.local/share/coeditor/data-dir.json`、Windows `%LOCALAPPDATA%\coeditor\data-dir.json`），且未显式设置环境变量，则以该设置为准。启动前可用 `COEDITOR_DATA_DIR=/path bash start.sh` 覆盖。该指针文件只在用户**手工把数据目录改成非默认位置**时才会生成，改回默认目录即自动删除——用户只感知"数据目录"这一个位置，删除它时指针一并删除，无残留。
 
-数据目录 `./data` 包含：`prompts/`（审阅风格配置）、`templates/`（文档模板）、`users/`（用户文档与设置）。
+不设置任何环境变量裸启动 server 时，数据目录回退到平台默认：Linux `~/.local/share/coeditor`（XDG）、macOS `~/Library/Application Support/coeditor`、Windows `%LOCALAPPDATA%\coeditor`。首次运行 server 会把**内置种子**（`packages/server/resources/` 下的 novel 模板 + 三个审阅风格提示词，随包内联、类似 Java 的 `src/main/resources`）自动写入数据目录，开箱即用。
+
+数据目录包含：`templates/`（文档模板，内置种子首次运行自动写入）、`users/`（用户文档与设置）。审阅 prompt 内置于模板，无独立 prompts 目录。
 
 ### 3. 反向代理（可选）
 

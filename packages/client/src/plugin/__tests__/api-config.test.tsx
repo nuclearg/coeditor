@@ -69,7 +69,7 @@ describe('API 配置菜单项 → Dialog 打开链路', () => {
     await act(async () => {
       root.render(
         <>
-          <SettingsMenu />
+          <SettingsMenu showReviewStyle />
           <SlotHost slot="root" ctx={{}} />
         </>,
       )

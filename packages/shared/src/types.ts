@@ -15,12 +15,29 @@ export interface AttachmentDef {
   type: string        // 类型 key：outline / worldview / characters ...
   name: string | { zh: string; en: string }        // 显示名：大纲 / 世界观 / 人设（支持多语言）
   contextLabel: string | { zh: string; en: string } // 进 AI 上下文的包装标签：文章大纲 / 世界观设定
+  /**
+   * 附件审阅 prompt（按审阅风格）。支持 ${} 变量：
+   * - ${附件type}：任一附件当前内容（如 ${outline}、${worldview}），当前被审附件用自身 type 引用
+   * - ${document}：全文正文（不含附件）
+   * - ${currentChapter} / ${currentParagraph} / ${currentChapterPrevParagraphs}
+   * 未配置（或空字符串）时回退内置默认文案。
+   */
+  prompts?: Partial<Record<ReviewStyle, string>>
 }
 
 /** 文档模板：定义文档的附件种类 */
 export interface DocumentTemplate {
   id: string
   name: string
+  /** 一句话简介：首页模板下拉框里显示为「名称 - 简介」 */
+  desc?: string | { zh: string; en: string }
+  /** 详细介绍（markdown）：首页选中模板后展示，说明各项附件的作用 */
+  summary?: string | { zh: string; en: string }
+  /**
+   * 文档级审阅 prompt（全文/章节/段落/闲聊，按场景分组、组内按审阅风格）。
+   * 支持与附件级 prompts 相同的 ${} 变量。未配置时回退内置默认文案。
+   */
+  prompts?: Partial<Record<PromptScene, Partial<Record<ReviewStyle, string>>>>
   attachments: AttachmentDef[]
 }
 
@@ -84,9 +101,13 @@ export type ConversationType = (typeof CONVERSATION_TYPES)[number]
 export const REVIEW_TYPES = ['paragraph', 'attachment', 'chapter', 'fulltext', 'casual'] as const
 export type ReviewType = (typeof REVIEW_TYPES)[number]
 
-/** 审阅风格（对应 data/prompts/{style}.json） */
+/** 审阅风格（模板内 prompts 按此细分） */
 export const REVIEW_STYLES = ['gentle', 'strict', 'praise'] as const
 export type ReviewStyle = (typeof REVIEW_STYLES)[number]
+
+/** 审阅场景（模板顶层 prompts 的分组） */
+export const PROMPT_SCENES = ['fulltext', 'chapter', 'paragraph', 'casual'] as const
+export type PromptScene = (typeof PROMPT_SCENES)[number]
 
 export interface AiConversation {
   id: string

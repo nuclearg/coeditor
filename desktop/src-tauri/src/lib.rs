@@ -1,8 +1,10 @@
 // CoEditor 开源版桌面壳：内置本地 server sidecar。
 // - dev：窗口直连 Taro dev server（localhost:5173），后端走 devServer 代理
-// - prod：随机端口拉起 coeditor-server sidecar（内置静态 dist-h5 + /api 同源），
-//   数据目录在 app 数据目录下（首次运行从捆绑资源种子化 prompts/templates）
-use std::fs;
+// - prod：随机端口拉起 coeditor-server sidecar（内置静态 dist-h5 + /api 同源）
+//
+// 职责边界：数据目录的一切逻辑（平台默认、指针文件、运行时切换、种子化）都在
+// 服务端（packages/server）。桌面壳**不设置 COEDITOR_DATA_DIR**，sidecar 像裸启动
+// 一样自行解析；种子数据（模板/提示词）由服务端内置（seed.ts），无需外部传入。
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
@@ -20,6 +22,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // dev 构建：不拉 sidecar，直接用 Taro dev server（由 beforeDevCommand 启动）
             #[cfg(dev)]
@@ -31,7 +34,6 @@ pub fn run() {
             #[cfg(not(dev))]
             {
                 let port = pick_free_port();
-                let data_root = prepare_data_dir(app)?;
                 let web_root = web_root_path(app)?;
 
                 let (mut rx, child) = app
@@ -40,7 +42,6 @@ pub fn run() {
                     .expect("sidecar coeditor-server 未找到：请先运行 desktop/build-desktop.sh")
                     .env("PORT", port.to_string())
                     .env("HOST", "127.0.0.1")
-                    .env("COEDITOR_DATA_DIR", data_root.to_string_lossy().to_string())
                     .env("COEDITOR_WEB_ROOT", web_root.to_string_lossy().to_string())
                     .spawn()
                     .expect("启动 coeditor server sidecar 失败");
@@ -125,39 +126,8 @@ fn probe(port: u16) -> bool {
     false
 }
 
-/// 数据目录：<appDataDir>/data；首次运行从捆绑资源种子化 prompts/templates。
-fn prepare_data_dir(app: &tauri::App) -> tauri::Result<PathBuf> {
-    let data = app.path().app_data_dir()?.join("data");
-    if !data.join("prompts").exists() || !data.join("templates").exists() {
-        let seed = app
-            .path()
-            .resolve("seed-data", tauri::path::BaseDirectory::Resource)?;
-        if seed.exists() {
-            copy_dir_recursive(&seed, &data)?;
-        }
-    }
-    Ok(data)
-}
-
 /// Web 静态根：捆绑进资源的 dist-h5。
 fn web_root_path(app: &tauri::App) -> tauri::Result<PathBuf> {
     app.path()
         .resolve("dist-h5", tauri::path::BaseDirectory::Resource)
-}
-
-fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
-    if !dst.exists() {
-        fs::create_dir_all(dst)?;
-    }
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let from = entry.path();
-        let to = dst.join(entry.file_name());
-        if from.is_dir() {
-            copy_dir_recursive(&from, &to)?;
-        } else {
-            fs::copy(&from, &to)?;
-        }
-    }
-    Ok(())
 }

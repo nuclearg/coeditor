@@ -19,8 +19,6 @@
     "targets": ["app", "dmg"],
     "externalBin": ["binaries/coeditor-server"],
     "resources": {
-      "../../data/prompts": "seed-data/prompts",
-      "../../data/templates": "seed-data/templates",
       "../../packages/client/dist-h5": "dist-h5"
     },
     "icon": [

@@ -83,6 +83,23 @@ export default {
   'settings.light': '日间',
   'settings.dark': '夜间',
   'settings.apiConfig': 'API 配置',
+  'settings.dataDir': '数据目录',
+  'settings.dataDirHint': '所有数据（文章、章节、草稿、AI 会话）都保存在这个目录下。切换后立即生效，原目录的数据不会被移动。',
+  'settings.dataDirCurrent': '当前目录',
+  'settings.dataDirNew': '新目录路径',
+  'settings.dataDirPick': '选择…',
+  'settings.dataDirSave': '切换并保存',
+  'settings.dataDirSaved': '已切换，新目录已生效',
+  'settings.dataDirEmpty': '请输入目录路径',
+  'settings.dataDirPersistHint': '设置会保存下来，重启后依然生效（桌面版重启应用，Web 版重启服务）。',
+
+  // 首页
+  'home.count': '{n} 篇',
+  'home.createWorks': '创建作品',
+  'home.allWorks': '全部作品',
+  'home.templatePlaceholder': '选择模板…',
+  'home.selectTemplateHint': '请先选择模板，再输入标题',
+  'home.updatedAt': '更新于 {date}',
 
   // API 配置
   'apiConfig.title': 'AI 接口配置',

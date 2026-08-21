@@ -81,7 +81,8 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
-data/users/
+# 运行时数据目录（start.sh 默认数据目录）：由 server 首次运行自动种子化模板，不进版本库
+data/
 deploy/
 .output
 

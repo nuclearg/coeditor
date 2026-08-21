@@ -12,7 +12,6 @@
 import { FileRepository } from './file-repository.js'
 import type { Repository } from './types.js'
 
-// Repository already includes loadPrompt — no intersection type needed.
 export const repo: Repository = new FileRepository()
 
 export type { Repository } from './types.js'

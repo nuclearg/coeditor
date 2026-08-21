@@ -204,7 +204,8 @@ export function LayoutShell({ sidebar, editor, ai, home, content, footer, childr
                 <SlotHost slot="main.head.middle" />
                 <View className="flex-1" />
                 <View className="flex items-center gap-1 shrink-0">
-                  <SlotHost slot="main.head.right" defaults={<SettingsMenu />} />
+                  {/* 审阅风格只在编辑页（有 sidebar）显示 */}
+                  <SlotHost slot="main.head.right" defaults={<SettingsMenu showReviewStyle={!!sidebar} />} />
                 </View>
               </View>
             }

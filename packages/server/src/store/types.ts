@@ -111,14 +111,6 @@ export interface TurnRepo {
 
 // === Settings ===
 
-export interface PromptFile {
-  fulltextReview: string
-  chapterReview: string
-  attachmentReview: string
-  paragraphReview: string
-  casual: string
-}
-
 export interface SettingsRepo {
   get(userId: string): Promise<AppSettings>
   update(userId: string, data: Partial<AppSettings>): Promise<AppSettings>
@@ -139,10 +131,14 @@ export interface Repository {
 
   /**
    * One-time initialization on server startup.
-   * Ensures user directory and default config exist.
+   * Ensures user directory, default config and bundled template seeds exist.
    */
   initialize(): Promise<void>
 
-  /** Load AI review prompt for a given style */
-  loadPrompt(style: string): Promise<PromptFile>
+  /**
+   * 运行时切换数据根目录（settings.update 的 dataDir 字段触发）：
+   * 迁移 templates 种子到新目录（缺失时从旧目录复制）、重建用户目录，
+   * 并把偏好持久化到独立于数据目录的偏好文件（重启后依然生效）。
+   */
+  switchDataDir(newRoot: string): Promise<void>
 }

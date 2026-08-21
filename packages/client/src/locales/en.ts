@@ -83,6 +83,23 @@ export default {
   'settings.light': 'Light',
   'settings.dark': 'Dark',
   'settings.apiConfig': 'API Config',
+  'settings.dataDir': 'Data Directory',
+  'settings.dataDirHint': 'All data (documents, chapters, drafts, AI conversations) is stored in this directory. The switch takes effect immediately; existing data is not moved.',
+  'settings.dataDirCurrent': 'Current directory',
+  'settings.dataDirNew': 'New directory path',
+  'settings.dataDirPick': 'Browse…',
+  'settings.dataDirSave': 'Switch & save',
+  'settings.dataDirSaved': 'Switched. The new directory is now in effect.',
+  'settings.dataDirEmpty': 'Please enter a directory path',
+  'settings.dataDirPersistHint': 'The choice is saved and still applies after restart (restart the app on desktop, or the server on web).',
+
+  // Home page
+  'home.count': '{n} works',
+  'home.createWorks': 'Create Work',
+  'home.allWorks': 'All Works',
+  'home.templatePlaceholder': 'Choose a template…',
+  'home.selectTemplateHint': 'Choose a template first, then enter a title',
+  'home.updatedAt': 'Updated {date}',
 
   // API config
   'apiConfig.title': 'AI API Config',
