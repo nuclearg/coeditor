@@ -68,14 +68,10 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const bucketId = draftId || parentId
   const convList = conversations[bucketId] || []
 
-  // Abort in-flight stream on unmount or context switch
+  // 离开页面：只放弃前端流式跟踪，不取消服务端生成（服务端继续生成并持久化，
+  // 下次进入 loadTurns 可看到完整结果）。主动取消只发生在用户点停止/删会话。
   useEffect(() => {
     return () => {
-      // 离开页面时同时通知服务端取消，避免流继续在后台烧 token
-      const inFlight = inFlightTurnRef.current
-      if (inFlight) {
-        void api.rpc('ai.cancel', { docId: inFlight.docId, convId: inFlight.convId, turnId: inFlight.turnId }).catch(() => {})
-      }
       abortRef.current?.abort()
     }
   }, [])
@@ -91,12 +87,9 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     loadConversations(docId, parentId, parentType, draftId).catch(() => {})
     if (switched) {
       skipScrollRef.current = true
-      // Cancel the in-flight stream server-side (the server keeps generating on
-      // disconnect) and release the sending lock so a new message isn't dropped.
-      const inFlight = inFlightTurnRef.current
-      if (inFlight) {
-        void api.rpc('ai.cancel', { docId: inFlight.docId, convId: inFlight.convId, turnId: inFlight.turnId }).catch(() => {})
-      }
+      // 切换 tab 不替用户取消 AI 生成：只放弃前端流式跟踪（abort fetch），
+      // 服务端继续生成并持久化，切回时 loadTurns 展示完整结果；
+      // 释放 sending 锁以允许新 tab 发起请求。
       abortRef.current?.abort()
       sendingRef.current = false
       inFlightTurnRef.current = null
