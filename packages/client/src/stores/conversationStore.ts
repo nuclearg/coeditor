@@ -13,9 +13,9 @@ interface ConversationStore {
   docId: string | null
   conversations: Record<string, AiConversation[]>
   turns: Record<string, AiTurn[]>
-  loadConversations: (docId: string, parentId: string, type: ConversationType) => Promise<void>
-  createConversation: (docId: string, type: ConversationType, parentId: string) => Promise<AiConversation>
-  deleteConversation: (docId: string, parentId: string, convId: string) => Promise<void>
+  loadConversations: (docId: string, parentId: string, type: ConversationType, draftId?: string) => Promise<void>
+  createConversation: (docId: string, type: ConversationType, parentId: string, draftId?: string) => Promise<AiConversation>
+  deleteConversation: (docId: string, parentId: string, convId: string, draftId?: string) => Promise<void>
   loadTurns: (docId: string, convId: string) => Promise<void>
   createTurn: (docId: string, convId: string, question: string, answer?: string, questionVisible?: boolean) => Promise<AiTurn>
   selectAnswer: (docId: string, turnId: string, answerIndex: number) => Promise<void>
@@ -57,8 +57,10 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   conversations: {},
   turns: {},
 
-  loadConversations: async (docId, parentId, type) => {
-    const key = `${docId}:${parentId}:${type}`
+  loadConversations: async (docId, parentId, type, draftId) => {
+    // draft:conversation 1:N——段落/附件会话按草稿版本分桶；无草稿场景用实体 id
+    const bucket = draftId || parentId
+    const key = `${docId}:${bucket}:${type}`
     const existing = loadingConvs.get(key)
     if (existing) return existing
     if (get().docId !== docId) {
@@ -67,10 +69,10 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     }
     const promise = (async () => {
       try {
-        const convs = await api.rpc<AiConversation[]>('conversations.list', { docId, parentId, type })
+        const convs = await api.rpc<AiConversation[]>('conversations.list', { docId, parentId, type, draftId })
         set((s) => {
           if (s.docId !== docId) return {}
-          const existingList = s.conversations[parentId] || []
+          const existingList = s.conversations[bucket] || []
           const serverIds = new Set(convs.map((c) => c.id))
           // conversations created locally while the request was in-flight should
           // survive, but ONLY if they match the current type (otherwise they
@@ -79,7 +81,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
           const localOnly = existingList.filter(
             (c) => !serverIds.has(c.id) && c.type === serverType,
           )
-          return { conversations: { ...s.conversations, [parentId]: [...convs, ...localOnly] } }
+          return { conversations: { ...s.conversations, [bucket]: [...convs, ...localOnly] } }
         })
       } catch (err) {
         console.error('[loadConversations]', err)
@@ -92,20 +94,22 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     return promise
   },
 
-  createConversation: async (docId, type, parentId) => {
-    const conv = await api.rpc<AiConversation>('conversations.create', { docId, type, parentId })
+  createConversation: async (docId, type, parentId, draftId) => {
+    const conv = await api.rpc<AiConversation>('conversations.create', { docId, type, parentId, draftId })
+    const bucket = draftId || parentId
     set((s) => (s.docId === docId ? {
       conversations: {
         ...s.conversations,
-        [parentId]: [conv, ...(s.conversations[parentId] || [])],
+        [bucket]: [conv, ...(s.conversations[bucket] || [])],
       },
     } : {}))
     return conv
   },
 
-  deleteConversation: async (docId, parentId, convId) => {
+  deleteConversation: async (docId, parentId, convId, draftId) => {
     await api.rpc('conversations.delete', { docId, convId })
     deletedConvs.add(convId)
+    const bucket = draftId || parentId
     set((s) => {
       if (s.docId !== docId) return {}
       const newTurns = { ...s.turns }
@@ -113,7 +117,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       return {
         conversations: {
           ...s.conversations,
-          [parentId]: (s.conversations[parentId] || []).filter((c) => c.id !== convId),
+          [bucket]: (s.conversations[bucket] || []).filter((c) => c.id !== convId),
         },
         turns: newTurns,
       }

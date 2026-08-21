@@ -44,6 +44,12 @@ export interface PromptContextInput {
   attachmentId?: string | null
   chapterId?: string | null
   paragraphId?: string | null
+  /**
+   * 草稿版本 id（段落/附件场景）：会话归属的 draftVersion。
+   * 提供时，当前段落/附件的内容按该草稿读取（而非当前激活草稿），
+   * 保证每个版本的会话审阅的是对应版本的内容。
+   */
+  draftId?: string | null
 }
 
 /**
@@ -63,7 +69,11 @@ export async function buildPromptContext(
     const attachments = await repo.attachments.list(USER_ID, input.docId)
     for (const att of attachments) {
       if (!attachmentVars.includes(att.type)) continue
-      ctx[att.type] = await attachmentContent(input.docId, att.type, att.currentDraftId)
+      // 被审附件若有草稿版本归属，按该草稿读取；其余附件按当前激活草稿
+      const byDraft = input.draftId && input.attachmentId === att.type
+      ctx[att.type] = byDraft
+        ? await draftContent(input.draftId!, (drafts) => drafts, input.docId, undefined, undefined, att.type)
+        : await attachmentContent(input.docId, att.type, att.currentDraftId)
     }
   }
 
@@ -74,7 +84,9 @@ export async function buildPromptContext(
     ctx.currentChapter = await buildChapterText(input.docId, input.chapterId)
   }
   if (wanted.has('currentParagraph') && input.chapterId && input.paragraphId) {
-    ctx.currentParagraph = await paragraphContent(input.docId, input.chapterId, input.paragraphId)
+    ctx.currentParagraph = input.draftId
+      ? await draftContent(input.draftId, (drafts) => drafts, input.docId, input.chapterId, input.paragraphId)
+      : await paragraphContent(input.docId, input.chapterId, input.paragraphId)
   }
   if (wanted.has('currentChapterPrevParagraphs') && input.chapterId && input.paragraphId) {
     ctx.currentChapterPrevParagraphs = await buildPrevParagraphs(
@@ -141,4 +153,19 @@ async function paragraphDraftContent(
   if (!para.currentDraftId) return ''
   const drafts = await repo.drafts.listParagraphDrafts(USER_ID, docId, chapterId, para.id)
   return drafts.find((d) => d.id === para.currentDraftId)?.content ?? ''
+}
+
+/** 按草稿 id 直接读取内容（段落或附件草稿，draft 归属的会话用它保证内容与版本一致） */
+async function draftContent(
+  draftId: string,
+  _select: (drafts: Array<{ id: string; content: string }>) => Array<{ id: string; content: string }>,
+  docId: string, chapterId?: string, paragraphId?: string, attachmentType?: string,
+): Promise<string> {
+  let drafts: Array<{ id: string; content: string }> = []
+  if (attachmentType) {
+    drafts = await repo.drafts.listAttachmentDrafts(USER_ID, docId, attachmentType)
+  } else if (chapterId && paragraphId) {
+    drafts = await repo.drafts.listParagraphDrafts(USER_ID, docId, chapterId, paragraphId)
+  }
+  return drafts.find((d) => d.id === draftId)?.content ?? ''
 }

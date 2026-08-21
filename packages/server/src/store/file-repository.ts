@@ -536,7 +536,7 @@ class FileTemplatesRepo implements TemplatesRepo {
 // === Conversations ===
 
 class FileConversationRepo implements ConversationRepo {
-  async list(userId: string, docId: string, parentId: string, type: ConversationType): Promise<AiConversation[]> {
+  async list(userId: string, docId: string, parentId: string, type: ConversationType, draftId?: string): Promise<AiConversation[]> {
     const baseDir = conversationsDir(userId, docId)
     const entries = await listDir(baseDir)
 
@@ -544,6 +544,10 @@ class FileConversationRepo implements ConversationRepo {
       entries.map(async (entry) => {
         const conv = await readJSONOrNull<AiConversation>(conversationFilePath(userId, docId, entry))
         if (!conv || conv.type !== type) return null
+        // 草稿版本归属优先（draft:conversation 1:N）；无 draftId 时回退实体归属（旧数据/无草稿场景）
+        if (draftId) {
+          return conv.draftId === draftId ? conv : null
+        }
         // Filter by parent
         if (type === 'casual') {
           return conv.documentId === parentId ? conv : null

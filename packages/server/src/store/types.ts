@@ -80,7 +80,7 @@ export interface TemplatesRepo {
 // === Conversation ===
 
 export interface ConversationRepo {
-  list(userId: string, docId: string, parentId: string, type: ConversationType): Promise<AiConversation[]>
+  list(userId: string, docId: string, parentId: string, type: ConversationType, draftId?: string): Promise<AiConversation[]>
   get(userId: string, docId: string, convId: string): Promise<AiConversation | null>
   create(userId: string, docId: string, conv: AiConversation): Promise<AiConversation>
   delete(userId: string, docId: string, convId: string): Promise<void>

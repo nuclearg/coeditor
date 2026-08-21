@@ -15,9 +15,11 @@ app.post('/api/conversations.list', defineRpc(
     docId: safeId,
     parentId: safeId,
     type: conversationTypeSchema,
+    // 草稿版本归属（段落/附件场景）：传了按 draftId 过滤，否则按 parentId（实体）
+    draftId: safeId.optional(),
   }),
   async (input) => {
-    return repo.conversations.list(USER_ID, input.docId, input.parentId, input.type)
+    return repo.conversations.list(USER_ID, input.docId, input.parentId, input.type, input.draftId)
   },
 ))
 
@@ -26,6 +28,8 @@ app.post('/api/conversations.create', defineRpc(
     docId: safeId,
     type: conversationTypeSchema,
     parentId: safeId,
+    // 草稿版本 id（段落/附件场景）：每个 draftVersion 独立会话（1:N）
+    draftId: safeId.optional(),
   }),
   async (input) => {
     // Parent document must exist — otherwise we write an orphan conversation
@@ -42,6 +46,7 @@ app.post('/api/conversations.create', defineRpc(
       ...(input.type === 'attachment_review' ? { attachmentId: input.parentId } : {}),
       ...(input.type === 'paragraph_review' ? { paragraphId: input.parentId } : {}),
       ...(input.type === 'chapter_review' ? { chapterId: input.parentId } : {}),
+      ...(input.draftId ? { draftId: input.draftId } : {}),
       createdAt: new Date().toISOString(),
     }
     return repo.conversations.create(USER_ID, input.docId, conv)

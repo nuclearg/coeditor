@@ -231,6 +231,8 @@ export default function DocumentEditPage() {
           isChapter={!!viewingChapterId}
           chapterId={viewingChapterId || undefined}
           isFullText={viewingFullText}
+          // 当前草稿版本：段落/附件会话按此分桶（draft:conversation 1:N）
+          draftId={activeCurrentDraftId || undefined}
           autoSubmit={submittingForAI}
           onAutoSubmitDone={() => setSubmittingForAI(false)}
         />

@@ -198,6 +198,8 @@ app.post('/api/ai.chat', async (c) => {
         attachmentId: conv.attachmentId,
         chapterId: conv.chapterId,
         paragraphId: conv.paragraphId,
+        // draft:conversation 1:N：按会话归属的草稿版本读取被审内容
+        draftId: conv.draftId,
       }))
     : promptTemplate
 

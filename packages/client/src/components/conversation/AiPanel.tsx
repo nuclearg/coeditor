@@ -26,11 +26,13 @@ interface AiPanelProps {
   isChapter?: boolean
   chapterId?: string
   isFullText?: boolean
+  /** 当前草稿版本 id（段落/附件场景）：会话按 draftVersion 分桶（draft:conversation 1:N） */
+  draftId?: string
   autoSubmit?: boolean
   onAutoSubmitDone?: () => void
 }
 
-export function AiPanel({ docId, selection, currentContent, isAttachment, attachmentId, isChapter, chapterId, isFullText, autoSubmit, onAutoSubmitDone }: AiPanelProps) {
+export function AiPanel({ docId, selection, currentContent, isAttachment, attachmentId, isChapter, chapterId, isFullText, draftId, autoSubmit, onAutoSubmitDone }: AiPanelProps) {
   const t = useT()
   const conversations = useConversationStore((s) => s.conversations)
   const turns = useConversationStore((s) => s.turns)
@@ -62,7 +64,9 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const parentId = isFullText || isAttachment ? (attachmentId || docId) : isChapter ? (chapterId || docId) : selection ? selection.paragraphId : docId
   const parentType: ConversationType = isFullText ? 'casual' : isAttachment ? 'attachment_review' : isChapter ? 'chapter_review' : selection ? 'paragraph_review' : 'casual'
   const reviewType = isFullText ? 'fulltext' : isAttachment ? 'attachment' : isChapter ? 'chapter' : selection ? 'paragraph' : 'casual'
-  const convList = conversations[parentId] || []
+  // draft:conversation 1:N：段落/附件会话按当前草稿版本分桶（保存=新版本=切会话窗口）
+  const bucketId = draftId || parentId
+  const convList = conversations[bucketId] || []
 
   // Abort in-flight stream on unmount or context switch
   useEffect(() => {
@@ -84,7 +88,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     const switched = prevParentId.current !== parentId || prevParentType.current !== parentType
     prevParentId.current = parentId
     prevParentType.current = parentType
-    loadConversations(docId, parentId, parentType).catch(() => {})
+    loadConversations(docId, parentId, parentType, draftId).catch(() => {})
     if (switched) {
       skipScrollRef.current = true
       // Cancel the in-flight stream server-side (the server keeps generating on
@@ -103,7 +107,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       setStreamContent('')
       setThinkingContent('')
     }
-  }, [docId, parentId, parentType, loadConversations])
+  }, [docId, parentId, parentType, draftId, loadConversations])
 
   useEffect(() => {
     const list = conversations[parentId] || []
@@ -188,7 +192,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
 
       if (args.kind === 'message') {
         if (!convId) {
-          const conv = await createConversation(docId, parentType, parentId)
+          const conv = await createConversation(docId, parentType, parentId, draftId)
           convId = conv.id
           setActiveConvId(convId)
         }
@@ -311,11 +315,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   // Auto-submit on AI review button click
   const autoSubmitLock = useRef(false)
   const currentContentRef = useRef(currentContent)
-  const activeConvIdRef = useRef(activeConvId)
-  const activeTurnsRef = useRef(activeTurns)
   currentContentRef.current = currentContent
-  activeConvIdRef.current = activeConvId
-  activeTurnsRef.current = activeTurns
 
   useEffect(() => {
     if (autoSubmit && !autoSubmitLock.current) {
@@ -339,20 +339,11 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
 
       const doSubmit = async () => {
         try {
-          const currentConvId = activeConvIdRef.current
-          const currentTurns = activeTurnsRef.current
-
-          if (!currentConvId) {
-            const conv = await createConversation(docId, parentType, parentId)
-            setActiveConvId(conv.id)
-            await sendMessage(question, true, conv.id, focus, true)
-          } else if (currentTurns.length > 0) {
-            const lastTurn = currentTurns[currentTurns.length - 1]
-            await handleRetry(lastTurn.id, focus, true)
-          } else {
-            setActiveConvId(currentConvId)
-            await sendMessage(question, true, currentConvId, focus, true)
-          }
+          // 审阅总是新开会话窗口（不再复用/重试旧会话）：
+          // 每次审阅针对当前草稿内容独立成会话，便于对比不同版本的审阅意见。
+          const conv = await createConversation(docId, parentType, parentId, draftId)
+          setActiveConvId(conv.id)
+          await sendMessage(question, true, conv.id, focus, true)
         } catch (err) {
           // createConversation (or anything above) rejected: surface it and
           // make sure the review button is never stuck in a pending state.
@@ -419,7 +410,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
                     setThinkingContent('')
                   }
                   if (isActive) setActiveConvId(null)
-                  try { await deleteConversation(docId, parentId, conv.id) } catch { /* ignore */ }
+                  try { await deleteConversation(docId, parentId, conv.id, draftId) } catch { /* ignore */ }
                 }}
               >
                 <Icon name="close" size={14} color="var(--muted-fg)" />
