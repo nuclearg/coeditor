@@ -46,17 +46,23 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
   const input = useAiInputStore((s) => s.input)
   const setInput = useAiInputStore((s) => s.setInput)
-  const streaming = useAiInputStore((s) => s.streaming)
-  const setStreaming = useAiInputStore((s) => s.setStreaming)
-  const [streamingConvId, setStreamingConvId] = useState<string | null>(null)
-  const [streamContent, setStreamContent] = useState('')
-  const [thinkingContent, setThinkingContent] = useState('')
+  // 流式状态按会话（convId）独立（conversationStore.streams）：
+  // 支持多个并发审阅各自打字机；切 tab 只换显示、不中断进行中的生成。
+  const streams = useConversationStore((s) => s.streams)
+  const setStream = useConversationStore((s) => s.setStream)
+  const clearStream = useConversationStore((s) => s.clearStream)
   // 思考过程折叠：历史答案按 answerId 记展开态；流式思考在开始输出正文后默认折叠
   const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({})
   const [streamThinkingExpanded, setStreamThinkingExpanded] = useState(false)
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  // 每个会话独立的 in-flight 流（controller + 归属 turn）
+  const inflightRef = useRef<Record<string, { controller: AbortController; docId: string; turnId: string }>>({})
+  // 当前激活会话的流式状态（渲染用；切 tab 只是 activeConvId 变化，各会话流状态独立保留）
+  const activeStream = activeConvId ? streams[activeConvId] : undefined
+  const streaming = activeStream?.streaming ?? false
+  const streamContent = activeStream?.content ?? ''
+  const thinkingContent = activeStream?.thinking ?? ''
 
   // Paragraph conversations are bucketed by the STABLE paragraphId (not
   // currentDraftId): saving a draft changes currentDraftId, which used to
@@ -68,11 +74,14 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const bucketId = draftId || parentId
   const convList = conversations[bucketId] || []
 
-  // 离开页面：只放弃前端流式跟踪，不取消服务端生成（服务端继续生成并持久化，
-  // 下次进入 loadTurns 可看到完整结果）。主动取消只发生在用户点停止/删会话。
+  // 离开页面：只放弃前端流式跟踪（abort 所有 in-flight），不取消服务端生成
+  // （服务端继续生成并持久化，下次进入 loadTurns 可看到完整结果）。
   useEffect(() => {
     return () => {
-      abortRef.current?.abort()
+      for (const k of Object.keys(inflightRef.current)) {
+        inflightRef.current[k]?.controller.abort()
+      }
+      useConversationStore.getState().clearAllStreams()
     }
   }, [])
 
@@ -87,18 +96,10 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     loadConversations(docId, parentId, parentType, draftId).catch(() => {})
     if (switched) {
       skipScrollRef.current = true
-      // 切换 tab 不替用户取消 AI 生成：只放弃前端流式跟踪（abort fetch），
-      // 服务端继续生成并持久化，切回时 loadTurns 展示完整结果；
-      // 释放 sending 锁以允许新 tab 发起请求。
-      abortRef.current?.abort()
-      sendingRef.current = false
-      inFlightTurnRef.current = null
+      // 切换 tab 只换显示：进行中的流（含其他会话的并发流）不受影响，
+      // 切回时打字机继续；仅重置当前视图的激活会话与错误。
       setActiveConvId(null)
-      setStreaming(false)
-      setStreamingConvId(null)
       setError('')
-      setStreamContent('')
-      setThinkingContent('')
     }
   }, [docId, parentId, parentType, draftId, loadConversations])
 
@@ -163,21 +164,14 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       | { kind: 'message'; question: string; hideQuestion?: boolean; targetConvId?: string; focus?: string; review?: boolean }
       | { kind: 'retry'; turnId: string; focus?: string; review?: boolean },
   ) => {
-    if (sendingRef.current) return
     if (args.kind === 'message' && !args.question.trim()) return
-    sendingRef.current = true
     setError('')
-    setStreaming(true)
-    setStreamContent('')
-    setThinkingContent('')
     setStreamThinkingExpanded(false)
-
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
 
     let reviewFailed = false
     let convId = args.kind === 'message' ? (args.targetConvId || activeConvId) : activeConvId
+    // 同一会话已有进行中的流 → 忽略重复提交（不同会话可并发）
+    if (convId && inflightRef.current[convId]) return
     let turnId = ''
     try {
       let answerId: string | undefined
@@ -189,12 +183,9 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           convId = conv.id
           setActiveConvId(convId)
         }
-        setStreamingConvId(convId)
-
         const turn = await createTurn(docId, convId, args.question, undefined, args.hideQuestion ? false : undefined)
         turnId = turn.id
         answerId = undefined
-        inFlightTurnRef.current = { docId, convId, turnId }
 
         const recent = (turns[convId] || []).slice(-20)
         history = buildHistory(recent)
@@ -202,21 +193,23 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       } else {
         const turn = activeTurns.find((t) => t.id === args.turnId)
         // Stale retry target (turn or conversation gone) — nothing to do.
-        if (!turn || !convId) { sendingRef.current = false; setStreaming(false); return }
-        setStreamingConvId(convId)
+        if (!turn || !convId) return
 
         const currentAnswer = turn.answers[turn.currentAnswerIndex]
         // Reuse the answer slot of an empty answer (aborted first attempt)
         // instead of piling up empty entries.
         answerId = currentAnswer && !currentAnswer.content ? currentAnswer.id : undefined
         turnId = args.turnId
-        inFlightTurnRef.current = { docId, convId, turnId }
 
         history = buildHistory(activeTurns, turnId).slice(-40)
         history.push({ role: 'user', content: turn.question.content })
       }
 
-      if (controller.signal.aborted) return
+      // 注册本会话的 in-flight 流（per-conv，互不干扰）
+      const controller = new AbortController()
+      inflightRef.current[convId!] = { controller, docId, turnId }
+      setStream(convId!, { streaming: true, content: '', thinking: '' })
+
       await streamAiResponse(
         {
           docId,
@@ -230,14 +223,15 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
         {
           onThinking: (text) => {
             // React 18 自动批处理会把流式循环中连续到来的 setState 合并成一次渲染，
-            // 导致打字机效果丢失（最后一个 chunk 才统一画气泡）。H5 端把 setState 包进
-            // flushSync 强制同步刷新（小程序端不启用）。
-            if (isH5()) flushSync(() => setThinkingContent(text))
-            else setThinkingContent(text)
+            // 导致打字机效果丢失。H5 端把 setState 包进 flushSync 强制同步刷新。
+            const update = () => setStream(convId!, { thinking: text })
+            if (isH5()) flushSync(update)
+            else update()
           },
           onContent: (text) => {
-            if (isH5()) flushSync(() => setStreamContent(text))
-            else setStreamContent(text)
+            const update = () => setStream(convId!, { content: text })
+            if (isH5()) flushSync(update)
+            else update()
           },
           onError: setError,
         },
@@ -245,25 +239,16 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       )
     } catch (err: unknown) {
       reviewFailed = true
-      // 中止（用户停止/上下文切换/离开页面）同样不是正常完成，
-      // finally 里按 review:failed 通知插件复位，避免误报 completed
+      // 中止（用户停止/离开页面）不是正常完成；finally 按 review:failed 复位
       if (err instanceof Error && err.name === 'AbortError') return
       const msg = err instanceof Error ? err.message : t("ai.requestFailed")
       setError(msg || t("error.aiRequest"))
     } finally {
       if (convId) {
         try { await loadTurns(docId, convId) } catch { /* ignore */ }
-      }
-      // Only clear UI state if this request is still the current one. A
-      // superseded request's finally runs in a microtask AFTER the new request
-      // already set streaming/refs, and must not clobber them.
-      if (abortRef.current === controller) {
-        inFlightTurnRef.current = null
-        sendingRef.current = false
-        setStreaming(false)
-        setStreamingConvId(null)
-        setStreamContent('')
-        setThinkingContent('')
+        delete inflightRef.current[convId]
+        // 流结束：保留 content 快照但停止流式渲染（气泡由 turns 渲染）
+        setStream(convId, { streaming: false })
         // 审阅流结束/失败事件（插件据此复位 UI 状态，docs/plugin-v2.md §5）
         if (args.review) {
           bus.emit(reviewFailed ? 'review:failed' : 'review:completed', { turnId, focus: args.focus })
@@ -277,7 +262,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
 
   const handleSend = () => {
     if (!input.trim()) return
-    if (sendingRef.current) return  // locked — keep input intact
+    if (activeConvId && inflightRef.current[activeConvId]) return  // 该会话流式进行中
     setError('')
     const q = input.trim()
     setInput('')
@@ -285,17 +270,16 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   }
 
   const handleAbort = () => {
-    const inFlight = inFlightTurnRef.current
-    if (inFlight) {
-      void api.rpc('ai.cancel', { docId: inFlight.docId, convId: inFlight.convId, turnId: inFlight.turnId })
+    // 停止按钮：只取消当前激活会话的流（用户主动操作）
+    const convId = activeConvId
+    const inFlight = convId ? inflightRef.current[convId] : undefined
+    if (inFlight && convId) {
+      void api.rpc('ai.cancel', { docId: inFlight.docId, convId, turnId: inFlight.turnId })
         .catch(() => {})
+      inFlight.controller.abort()
+      delete inflightRef.current[convId]
+      setStream(convId, { streaming: false })
     }
-    abortRef.current?.abort()
-    sendingRef.current = false
-    setStreaming(false)
-    setStreamingConvId(null)
-    setStreamContent('')
-    setThinkingContent('')
   }
 
   // 注册发送/中止实现到 aiInputStore（插件替换输入框/发送按钮时共用协议）
@@ -312,12 +296,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
 
   useEffect(() => {
     if (autoSubmit && !autoSubmitLock.current) {
-      // 流式进行中，不重复提交，直接完成
-      if (sendingRef.current) {
-        bus.emit('review:failed', {})
-        onAutoSubmitDone?.()
-        return
-      }
+      // 审阅总是新开会话（可与其他会话并发流式）；无内容则不提交
       // No draft content to review — complete immediately so the review
       // button never gets stuck in a pending state.
       if (!currentContentRef.current) {
@@ -391,16 +370,12 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
                   const isActive = conv.id === activeConvId
                   // 删除正在流式的会话：先取消服务端流，避免删目录后服务端 addAnswer
                   // 重建目录留下孤儿 turn，且避免配额继续消耗。
-                  const inFlight = inFlightTurnRef.current
-                  if (inFlight && inFlight.convId === conv.id) {
-                    void api.rpc('ai.cancel', { docId: inFlight.docId, convId: inFlight.convId, turnId: inFlight.turnId }).catch(() => {})
-                    abortRef.current?.abort()
-                    sendingRef.current = false
-                    inFlightTurnRef.current = null
-                    setStreaming(false)
-                    setStreamingConvId(null)
-                    setStreamContent('')
-                    setThinkingContent('')
+                  const inFlight = inflightRef.current[conv.id]
+                  if (inFlight) {
+                    void api.rpc('ai.cancel', { docId: inFlight.docId, convId: conv.id, turnId: inFlight.turnId }).catch(() => {})
+                    inFlight.controller.abort()
+                    delete inflightRef.current[conv.id]
+                    clearStream(conv.id)
                   }
                   if (isActive) setActiveConvId(null)
                   try { await deleteConversation(docId, parentId, conv.id, draftId) } catch { /* ignore */ }
@@ -506,8 +481,8 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           />
         ))}
 
-        {/* Streaming indicator */}
-        {streaming && streamingConvId === activeConvId && (thinkingContent || streamContent) && (
+        {/* Streaming indicator：当前激活会话的流式气泡（各会话独立，切回即继续） */}
+        {streaming && (thinkingContent || streamContent) && (
           <View className="bubble-ai">
             {thinkingContent && (
               <View className="mb-2">
