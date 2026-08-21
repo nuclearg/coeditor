@@ -23,7 +23,7 @@ interface ConversationStore {
   /** 流式状态按会话独立：切 tab 只换显示，不中断进行中的生成 */
   streams: Record<string, ConvStreamState>
   loadConversations: (docId: string, parentId: string, type: ConversationType, draftId?: string) => Promise<void>
-  createConversation: (docId: string, type: ConversationType, parentId: string, draftId?: string) => Promise<AiConversation>
+  createConversation: (docId: string, type: ConversationType, parentId: string, draftId?: string, chapterId?: string) => Promise<AiConversation>
   deleteConversation: (docId: string, parentId: string, convId: string, draftId?: string) => Promise<void>
   loadTurns: (docId: string, convId: string) => Promise<void>
   createTurn: (docId: string, convId: string, question: string, answer?: string, questionVisible?: boolean) => Promise<AiTurn>
@@ -107,8 +107,8 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     return promise
   },
 
-  createConversation: async (docId, type, parentId, draftId) => {
-    const conv = await api.rpc<AiConversation>('conversations.create', { docId, type, parentId, draftId })
+  createConversation: async (docId, type, parentId, draftId, chapterId) => {
+    const conv = await api.rpc<AiConversation>('conversations.create', { docId, type, parentId, draftId, chapterId })
     const bucket = draftId || parentId
     set((s) => (s.docId === docId ? {
       conversations: {

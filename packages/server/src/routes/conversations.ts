@@ -30,6 +30,8 @@ app.post('/api/conversations.create', defineRpc(
     parentId: safeId,
     // 草稿版本 id（段落/附件场景）：每个 draftVersion 独立会话（1:N）
     draftId: safeId.optional(),
+    // 章节 id（段落审阅场景）：段落会话必须携带，供上下文加载当前章节/段落
+    chapterId: safeId.optional(),
   }),
   async (input) => {
     // Parent document must exist — otherwise we write an orphan conversation
@@ -46,6 +48,8 @@ app.post('/api/conversations.create', defineRpc(
       ...(input.type === 'attachment_review' ? { attachmentId: input.parentId } : {}),
       ...(input.type === 'paragraph_review' ? { paragraphId: input.parentId } : {}),
       ...(input.type === 'chapter_review' ? { chapterId: input.parentId } : {}),
+      // 段落审阅：显式携带章节归属（chapter_review 时 chapterId=parentId 已覆盖）
+      ...(input.type === 'paragraph_review' && input.chapterId ? { chapterId: input.chapterId } : {}),
       ...(input.draftId ? { draftId: input.draftId } : {}),
       createdAt: new Date().toISOString(),
     }
