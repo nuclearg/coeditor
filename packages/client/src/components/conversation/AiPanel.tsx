@@ -232,14 +232,15 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
         },
         {
           onThinking: (text) => {
-            setThinkingContent(text)
             // React 18 自动批处理会把流式循环中连续到来的 setState 合并成一次渲染，
-            // 导致打字机效果丢失（最后一个 chunk 才统一画气泡）。H5 端强制同步刷新。
-            if (isH5()) flushSync(() => {})
+            // 导致打字机效果丢失（最后一个 chunk 才统一画气泡）。H5 端把 setState 包进
+            // flushSync 强制同步刷新（小程序端不启用）。
+            if (isH5()) flushSync(() => setThinkingContent(text))
+            else setThinkingContent(text)
           },
           onContent: (text) => {
-            setStreamContent(text)
-            if (isH5()) flushSync(() => {})
+            if (isH5()) flushSync(() => setStreamContent(text))
+            else setStreamContent(text)
           },
           onError: setError,
         },
