@@ -243,9 +243,6 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
             else setThinkingContent(text)
           },
           onContent: (text) => {
-            // eslint-disable-next-line no-console
-            console.log('[coeditor-stream] AiPanel.onContent len=', text.length,
-              'streaming=', streaming, 'streamingConvId=', streamingConvId, 'activeConvId=', activeConvId)
             if (isH5()) flushSync(() => setStreamContent(text))
             else setStreamContent(text)
           },

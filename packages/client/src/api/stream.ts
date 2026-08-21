@@ -45,8 +45,6 @@ function handleSseLine(line: string, state: { content: string; thinking: string 
     }
     if (parsed.content) {
       state.content += parsed.content
-      // eslint-disable-next-line no-console
-      console.log('[coeditor-stream] handleSseLine onContent len=', state.content.length)
       callbacks.onContent(state.content)
     }
   } catch {
@@ -101,8 +99,6 @@ async function streamH5(
     buffer += decoder.decode(value, { stream: true })
     const lines = buffer.split('\n')
     buffer = lines.pop() || ''
-    // eslint-disable-next-line no-console
-    console.log('[coeditor-stream] chunk bytes=', value?.byteLength, 'lines=', lines.length)
 
     for (const line of lines) {
       if (!handleSseLine(line, state, callbacks)) {
