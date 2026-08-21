@@ -92,6 +92,8 @@ export function EditorPanel({
                   value={content}
                   onChange={onChange}
                   autoHeight={isMobile}
+                  // 与后端一致：附件（大纲/世界观/人设）200000 字符，段落 100000
+                  maxLength={editingAttachmentId ? 200000 : 100000}
                   style={isMobile
                     ? { border: '1px solid var(--border)' }
                     : { height: '100%', minHeight: 0, border: '1px solid var(--border)' }}

@@ -440,6 +440,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           onChange={setInput}
           onEnter={handleSend}
           disabled={streaming}
+          maxLength={50000}
         />
       </View>
     )
