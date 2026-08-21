@@ -332,8 +332,12 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
         try {
           // 审阅总是新开会话窗口（不再复用/重试旧会话）：
           // 每次审阅针对当前草稿内容独立成会话，便于对比不同版本的审阅意见。
+          // eslint-disable-next-line no-console
+          console.log('[review] autoSubmit draftId=', draftId, 'parentId=', parentId, 'parentType=', parentType, 'bucket=', bucketId)
           const conv = await createConversation(docId, parentType, parentId, draftId,
             parentType === 'paragraph_review' ? selection?.chapterId : undefined)
+          // eslint-disable-next-line no-console
+          console.log('[review] created conv=', conv.id, 'convList len=', convList.length)
           setActiveConvId(conv.id)
           await sendMessage(question, true, conv.id, focus, true)
         } catch (err) {
