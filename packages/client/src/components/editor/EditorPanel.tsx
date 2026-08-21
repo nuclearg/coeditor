@@ -129,15 +129,16 @@ export function EditorPanel({
                 defaults={
                   <>
                     {isEditable && (
-                      <Button onClick={() => doSave()} disabled={!dirty || saving} style={{ height: isH5() ? 38 : 60, padding: isH5() ? '0 24px' : undefined }}>
+                      <Button onClick={() => doSave()} disabled={!dirty || saving} variant="outline" style={{ height: isH5() ? 38 : 60, padding: isH5() ? '0 24px' : undefined }}>
                         {t('common.save')}
                       </Button>
                     )}
                     <SlotHost
                       slot="review-button"
                       defaults={
-                        <Button onClick={() => useReviewStore.getState().startReview()} variant="outline" style={{ height: isH5() ? 38 : 60, padding: isH5() ? '0 24px' : undefined }}>
-                          {t('editor.review')}
+                        // 保存并审阅：审阅链路本身会先保存再发起（edit 页 autoSubmit 前置 doSave）
+                        <Button onClick={() => useReviewStore.getState().startReview()} variant="primary" style={{ height: isH5() ? 38 : 60, padding: isH5() ? '0 24px' : undefined }}>
+                          {t('editor.reviewAndSave')}
                         </Button>
                       }
                     />
