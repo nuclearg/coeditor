@@ -97,9 +97,6 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   createConversation: async (docId, type, parentId, draftId, chapterId) => {
     const conv = await api.rpc<AiConversation>('conversations.create', { docId, type, parentId, draftId, chapterId })
     const bucket = draftId || parentId
-    // eslint-disable-next-line no-console
-    console.log('[conv] create bucket=', bucket, 'draftId=', draftId, 'parentId=', parentId,
-      'storeDocId=', useConversationStore.getState().docId, 'targetDocId=', docId)
     set((s) => (s.docId === docId ? {
       conversations: {
         ...s.conversations,

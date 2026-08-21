@@ -122,13 +122,14 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   }, [docId, parentId, parentType, draftId, loadConversations])
 
   useEffect(() => {
-    const list = conversations[parentId] || []
+    // 会话按 bucketId（draftId || parentId）分桶，自动选中逻辑必须查同一桶
+    const list = conversations[bucketId] || []
     if (activeConvId && !list.some((c) => c.id === activeConvId)) {
       setActiveConvId(list.length > 0 ? list[0].id : null)
     } else if (list.length > 0 && !activeConvId) {
       setActiveConvId(list[0].id)
     }
-  }, [parentId, conversations, activeConvId])
+  }, [bucketId, conversations, activeConvId])
 
   useEffect(() => {
     if (activeConvId) {
@@ -332,12 +333,8 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
         try {
           // 审阅总是新开会话窗口（不再复用/重试旧会话）：
           // 每次审阅针对当前草稿内容独立成会话，便于对比不同版本的审阅意见。
-          // eslint-disable-next-line no-console
-          console.log('[review] autoSubmit draftId=', draftId, 'parentId=', parentId, 'parentType=', parentType, 'bucket=', bucketId)
           const conv = await createConversation(docId, parentType, parentId, draftId,
             parentType === 'paragraph_review' ? selection?.chapterId : undefined)
-          // eslint-disable-next-line no-console
-          console.log('[review] created conv=', conv.id, 'convList len=', convList.length)
           setActiveConvId(conv.id)
           await sendMessage(question, true, conv.id, focus, true)
         } catch (err) {
