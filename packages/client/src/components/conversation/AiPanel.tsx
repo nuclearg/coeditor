@@ -46,11 +46,29 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
   const input = useAiInputStore((s) => s.input)
   const setInput = useAiInputStore((s) => s.setInput)
-  // 流式状态按会话（convId）独立（conversationStore.streams）：
-  // 支持多个并发审阅各自打字机；切 tab 只换显示、不中断进行中的生成。
-  const streams = useConversationStore((s) => s.streams)
-  const setStream = useConversationStore((s) => s.setStream)
-  const clearStream = useConversationStore((s) => s.clearStream)
+  // 流式状态按会话（convId）独立：支持多个并发审阅各自打字机；切 tab 只换显示、
+  // 不中断进行中的生成。用组件内 state（而非 zustand）是因为 flushSync 只对
+  // React setState 强制同步渲染——zustand 更新会被 React 批处理合并（打字机失效）。
+  const [streams, setStreams] = useState<Record<string, { streaming: boolean; content: string; thinking: string }>>({})
+  const setStream = (convId: string, patch: Partial<{ streaming: boolean; content: string; thinking: string }>) => {
+    setStreams((prev) => ({
+      ...prev,
+      [convId]: { ...(prev[convId] ?? { streaming: false, content: '', thinking: '' }), ...patch },
+    }))
+  }
+  const clearStream = (convId: string) => {
+    setStreams((prev) => {
+      if (!prev[convId]) return prev
+      const next = { ...prev }
+      delete next[convId]
+      return next
+    })
+  }
+  // 切换文档：流式状态整体清空
+  useEffect(() => {
+    setStreams({})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docId])
   // 思考过程折叠：历史答案按 answerId 记展开态；流式思考在开始输出正文后默认折叠
   const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({})
   const [streamThinkingExpanded, setStreamThinkingExpanded] = useState(false)
@@ -81,7 +99,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       for (const k of Object.keys(inflightRef.current)) {
         inflightRef.current[k]?.controller.abort()
       }
-      useConversationStore.getState().clearAllStreams()
+      setStreams({})
     }
   }, [])
 

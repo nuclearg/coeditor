@@ -9,28 +9,16 @@ const loadingTurns = new Map<string, Promise<void>>()
 // resolving AFTER deletion and resurrecting the deleted conv's turns.
 const deletedConvs = new Set<string>()
 
-/** 单个会话的流式 UI 状态（per-conv，支持多并发打字机） */
-export interface ConvStreamState {
-  streaming: boolean
-  content: string
-  thinking: string
-}
-
 interface ConversationStore {
   docId: string | null
   conversations: Record<string, AiConversation[]>
   turns: Record<string, AiTurn[]>
-  /** 流式状态按会话独立：切 tab 只换显示，不中断进行中的生成 */
-  streams: Record<string, ConvStreamState>
   loadConversations: (docId: string, parentId: string, type: ConversationType, draftId?: string) => Promise<void>
   createConversation: (docId: string, type: ConversationType, parentId: string, draftId?: string, chapterId?: string) => Promise<AiConversation>
   deleteConversation: (docId: string, parentId: string, convId: string, draftId?: string) => Promise<void>
   loadTurns: (docId: string, convId: string) => Promise<void>
   createTurn: (docId: string, convId: string, question: string, answer?: string, questionVisible?: boolean) => Promise<AiTurn>
   selectAnswer: (docId: string, turnId: string, answerIndex: number) => Promise<void>
-  setStream: (convId: string, patch: Partial<ConvStreamState>) => void
-  clearStream: (convId: string) => void
-  clearAllStreams: () => void
 }
 
 /**
@@ -68,7 +56,6 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
   docId: null,
   conversations: {},
   turns: {},
-  streams: {},
 
   loadConversations: async (docId, parentId, type, draftId) => {
     // draft:conversation 1:N——段落/附件会话按草稿版本分桶；无草稿场景用实体 id
@@ -77,7 +64,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     const existing = loadingConvs.get(key)
     if (existing) return existing
     if (get().docId !== docId) {
-      set({ docId, conversations: {}, turns: {}, streams: {} })
+      set({ docId, conversations: {}, turns: {} })
       deletedConvs.clear()
     }
     const promise = (async () => {
@@ -181,20 +168,4 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
     await api.rpc('turns.selectAnswer', { docId, turnId, convId, answerIndex })
     await refreshTurn(docId, turnId)
   },
-
-  setStream: (convId, patch) => set((s) => ({
-    streams: {
-      ...s.streams,
-      [convId]: { ...(s.streams[convId] ?? { streaming: false, content: '', thinking: '' }), ...patch },
-    },
-  })),
-
-  clearStream: (convId) => set((s) => {
-    if (!s.streams[convId]) return {}
-    const streams = { ...s.streams }
-    delete streams[convId]
-    return { streams }
-  }),
-
-  clearAllStreams: () => set({ streams: {} }),
 }))
