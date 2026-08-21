@@ -1,11 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "主窗口默认权限：核心 API + 外链打开 + 文件夹选择（数据目录设置）",
+  "description": "主窗口默认权限：核心 API + 外链打开 + 文件夹选择（数据目录设置）。release 下主窗口经 External loopback URL 加载（sidecar 静态服务），Tauri 判为 remote origin——必须声明 remote.urls，否则发行版所有 IPC 被拒（外链/目录选择器静默失效）",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "opener:default",
     "dialog:allow-open"
-  ]
+  ],
+  "remote": {
+    "urls": ["http://127.0.0.1:*"]
+  }
 }
