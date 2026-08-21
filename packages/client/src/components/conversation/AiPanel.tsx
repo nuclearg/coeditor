@@ -1,5 +1,6 @@
 import { ScrollView, View } from '@tarojs/components'
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { flushSync } from 'react-dom'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -230,8 +231,16 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           reviewFocus: args.focus,
         },
         {
-          onThinking: setThinkingContent,
-          onContent: setStreamContent,
+          onThinking: (text) => {
+            setThinkingContent(text)
+            // React 18 自动批处理会把流式循环中连续到来的 setState 合并成一次渲染，
+            // 导致打字机效果丢失（最后一个 chunk 才统一画气泡）。H5 端强制同步刷新。
+            if (isH5()) flushSync(() => {})
+          },
+          onContent: (text) => {
+            setStreamContent(text)
+            if (isH5()) flushSync(() => {})
+          },
           onError: setError,
         },
         controller.signal,
