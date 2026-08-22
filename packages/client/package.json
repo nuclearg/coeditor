@@ -9,7 +9,10 @@
     "dev": "taro build --type h5 --watch",
     "dev:weapp": "taro build --type weapp --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
+    "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:e2e:install": "puppeteer browsers install chrome-headless-shell"
   },
   "dependencies": {
     "@babel/runtime": "^7.24.4",
@@ -39,12 +42,14 @@
     "@tarojs/plugin-html": "4.2.1",
     "@tarojs/taro-loader": "^4.1.0",
     "@tarojs/webpack5-runner": "^4.1.0",
+    "@types/node": "^22.20.1",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/webpack-env": "^1.13.6",
     "babel-preset-taro": "^4.1.0",
     "jsdom": "^30.0.1",
     "postcss": "^8.4.18",
+    "puppeteer": "^24.43.1",
     "react-refresh": "^0.18.0",
     "sass": "^1.69.5",
     "typescript": "^5.6.0",

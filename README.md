@@ -138,6 +138,23 @@ pnpm test
 - 服务端：137 个接口 / 存储测试（`pnpm -C packages/server test`）
 - 客户端：79 个测试（`pnpm -C packages/client test`）
 
+### E2E（真实浏览器）
+
+覆盖 H5 关键交互：移动端新建章节/段落、草稿 localStorage 持久化与位置恢复、
+AI 输出吸底跟随、输入框自动聚焦。基建自动拉起独立端口（后端 3101 / dev 5175 /
+mock AI 3199）的真实后端 + mock AI 上游 + H5 dev server，结束后自动回收。
+
+```bash
+# 首次运行需先安装浏览器（约 100MB，只装一次；或设 PUPPETEER_EXECUTABLE_PATH）
+pnpm -C packages/client test:e2e:install
+
+pnpm -C packages/client test:e2e
+```
+
+- 用例在 `packages/client/e2e/`（vitest + puppeteer，`vitest.e2e.config.ts`）
+- 端口可用 `E2E_BACKEND_PORT` / `E2E_DEV_PORT` / `E2E_MOCK_PORT` 覆盖，避免与开发环境冲突
+- 类型检查：`pnpm -C packages/client typecheck:e2e`
+
 ## 项目结构
 
 ```

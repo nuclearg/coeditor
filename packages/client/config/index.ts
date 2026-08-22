@@ -92,13 +92,15 @@ export default defineConfig(async () => {
         includeSharedSrc(chain)
       },
       devServer: {
-        port: 5173,
+        // E2E 测试用独立端口（E2E_DEV_PORT），避免与正在开发的 5173 冲突
+        port: Number(process.env.E2E_DEV_PORT) || 5173,
         // SSE（ai.chat 流式输出）不能被压缩：gzip/br 会把整个响应缓冲到结束才下发，
         // 浏览器端拿不到逐块增量（流式打字机失效）。
         compress: false,
         proxy: {
           '/api': {
-            target: 'http://localhost:3001',
+            // E2E 测试时后端也在独立端口（E2E_BACKEND_PORT）
+            target: `http://localhost:${process.env.E2E_BACKEND_PORT || 3001}`,
             changeOrigin: true,
           },
         },
