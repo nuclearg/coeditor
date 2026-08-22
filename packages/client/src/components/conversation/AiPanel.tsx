@@ -147,24 +147,65 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   )
 
   // H5：监听 AI 对话区的滚动，维护吸底状态（用户滚离底部 10px 外则停止跟随）
+  const scrollContainerRef = useRef<HTMLElement | null>(null)
+  // 从末尾占位元素向上找最近的滚动容器（taro-scroll-view-core，overflow-y: auto/scroll）
+  const findScrollContainer = useCallback((): HTMLElement | null => {
+    const end = messagesEndRef.current
+    if (!end) return null
+    let node: HTMLElement | null = end.parentElement
+    while (node) {
+      const ov = getComputedStyle(node).overflowY
+      if (ov === 'auto' || ov === 'scroll') return node
+      node = node.parentElement
+    }
+    return null
+  }, [])
   useEffect(() => {
     if (!isH5()) return
-    const end = messagesEndRef.current
-    if (!end) return
-    // 从末尾占位元素向上找最近的滚动容器（taro-scroll-view-core，overflow-y: auto/scroll）
-    let container: HTMLElement | null = end.parentElement
-    while (container) {
-      const ov = getComputedStyle(container).overflowY
-      if (ov === 'auto' || ov === 'scroll') break
-      container = container.parentElement
-    }
-    if (!container) return
+    let container: HTMLElement | null = null
+    let userScrolling = false
+    let disposed = false
+    const markUserScroll = () => { userScrolling = true }
     const onScroll = () => {
-      stickToBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 10
+      if (!container) return
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight <= 10
+      if (userScrolling) {
+        userScrolling = false
+        stickToBottomRef.current = atBottom
+      } else if (atBottom) {
+        stickToBottomRef.current = true
+      }
     }
-    container.addEventListener('scroll', onScroll, { passive: true })
-    return () => container.removeEventListener('scroll', onScroll)
-  }, [])
+    const attach = (): boolean => {
+      const found = findScrollContainer()
+      if (!found) return false
+      container = found
+      scrollContainerRef.current = found
+      // 仅"用户主动滚动"（滚轮/触摸/按下拖动，含滚动条）才解除吸底；
+      // 程序化滚动（scrollTop 赋值，含其触发的 scroll 事件）只恢复吸底、不解除，
+      // 避免初始加载/消息更新的滚动动画把吸底状态误判成"用户滚离底部"。
+      found.addEventListener('wheel', markUserScroll, { passive: true })
+      found.addEventListener('touchmove', markUserScroll, { passive: true })
+      found.addEventListener('pointerdown', markUserScroll, { passive: true })
+      found.addEventListener('scroll', onScroll, { passive: true })
+      return true
+    }
+    if (!attach()) {
+      // AI 面板可能晚于挂载渲染（ResizablePanel 等），首帧找不到容器时延迟重试
+      const retry = setTimeout(() => { if (!disposed) attach() }, 300)
+      return () => { disposed = true; clearTimeout(retry) }
+    }
+    return () => {
+      disposed = true
+      scrollContainerRef.current = null
+      if (container) {
+        container.removeEventListener('wheel', markUserScroll)
+        container.removeEventListener('touchmove', markUserScroll)
+        container.removeEventListener('pointerdown', markUserScroll)
+        container.removeEventListener('scroll', onScroll)
+      }
+    }
+  }, [findScrollContainer])
 
   useEffect(() => {
     // 上下文切换后保持当前滚动位置；仅正常消息更新（发送/重试/流式）时滚到底部
@@ -174,11 +215,18 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     }
     // 吸底跟随：仅当用户仍停留在底部 10px 内才滚动到底部（AI 输出不锁定视角）；
     // 用户滚离底部后不再强制吸底，滚回底部后自动恢复跟随（由上面的 scroll 监听维护）。
-    if (isH5() && messagesEndRef.current && stickToBottomRef.current) {
-      // block: nearest 只滚动最近的可滚容器，避免带动外层页面视角
-      messagesEndRef.current.scrollIntoView({ behavior: streaming ? 'auto' : 'smooth', block: 'nearest' })
+    // 直接设置容器 scrollTop 滚到内容末尾（scrollIntoView(nearest) 会被容器 padding
+    // 顶起 ~12px，超出 10px 吸底判定，导致跟随时"永远差一点"）。
+    // 容器可能尚未被监听 effect 找到（首帧/懒加载），这里兜底查找。
+    let container = scrollContainerRef.current
+    if (!container && isH5()) {
+      container = findScrollContainer()
+      if (container) scrollContainerRef.current = container
     }
-  }, [activeTurns, streamContent, thinkingContent, streaming])
+    if (isH5() && container && stickToBottomRef.current) {
+      container.scrollTop = container.scrollHeight
+    }
+  }, [activeTurns, streamContent, thinkingContent, streaming, findScrollContainer])
 
   const toggleThinking = useCallback((answerId: string) => {
     setExpandedThinking((prev) => ({ ...prev, [answerId]: !prev[answerId] }))
@@ -255,6 +303,9 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       const controller = new AbortController()
       inflightRef.current[convId!] = { controller, docId, turnId }
       setStream(convId!, { streaming: true, content: '', thinking: '' })
+      // 发送消息即"想看输出"：强制恢复吸底（新会话/内容重建可能把滚动位置重置到顶部）；
+      // 用户中途滚离底部后仍可解除（scroll 监听）。
+      stickToBottomRef.current = true
 
       await streamAiResponse(
         {
