@@ -117,6 +117,12 @@ export interface AiConversation {
   /** paragraph_review 会话归属的段落 ID */
   paragraphId?: string
   chapterId?: string
+  /**
+   * 草稿版本 id（段落/附件场景）：draft:conversation = 严格 1:N——
+   * 每个草稿版本拥有自己的会话（提问/审阅都基于某个 draftVersion），
+   * 保存产生新版本即切换会话窗口。章节/全文/闲聊无草稿概念，不设置。
+   */
+  draftId?: string
   createdAt: string
 }
 

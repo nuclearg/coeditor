@@ -42,6 +42,7 @@ export default {
   'editor.unsaved': 'Unsaved',
   'editor.saving': 'Saving...',
   'editor.review': 'Review',
+  'editor.reviewAndSave': 'Save & Review',
   'editor.unsavedTitle': 'Unsaved changes',
   'editor.unsavedHint': 'You have unsaved changes. Save before switching?',
   'editor.discard': 'Discard',

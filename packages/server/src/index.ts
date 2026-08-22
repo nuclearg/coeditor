@@ -105,6 +105,14 @@ const STATIC_MIME: Record<string, string> = {
   '.map': 'application/json',
 }
 
+// 桌面壳 webview CSP：页面经 External loopback HTTP 加载，tauri.conf.json 的 csp
+// 对 remote origin 不生效，响应头才是有效管控面。产物无内联脚本（script 只许同源文件）；
+// Taro 运行时会注入内联样式，style 放开 unsafe-inline；图片允许 https（用户内容引用远端图）；
+// 连接仅同源（/api 走 sidecar 代理）；禁 object/frame。
+const DESKTOP_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"
+  + " img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self';"
+  + " object-src 'none'; base-uri 'self'; frame-src 'none'"
+
 if (WEB_ROOT) {
   app.get('*', async (c) => {
     const url = new URL(c.req.url)
@@ -119,6 +127,7 @@ if (WEB_ROOT) {
       if (!s.isFile()) return c.text('Not Found', 404)
       const ext = path.extname(filePath).toLowerCase()
       c.header('Content-Type', STATIC_MIME[ext] || 'application/octet-stream')
+      c.header('Content-Security-Policy', DESKTOP_CSP)
       // 桌面壳场景文件不变，html 不缓存、带 hash 的资源长缓存
       c.header('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable')
       return c.body(await readFile(filePath))

@@ -92,6 +92,8 @@ export function EditorPanel({
                   value={content}
                   onChange={onChange}
                   autoHeight={isMobile}
+                  // 与后端一致：附件（大纲/世界观/人设）200000 字符，段落 100000
+                  maxLength={editingAttachmentId ? 200000 : 100000}
                   style={isMobile
                     ? { border: '1px solid var(--border)' }
                     : { height: '100%', minHeight: 0, border: '1px solid var(--border)' }}
@@ -127,15 +129,16 @@ export function EditorPanel({
                 defaults={
                   <>
                     {isEditable && (
-                      <Button onClick={() => doSave()} disabled={!dirty || saving} style={{ height: isH5() ? 38 : 60, padding: isH5() ? '0 24px' : undefined }}>
+                      <Button onClick={() => doSave()} disabled={!dirty || saving} variant="outline" style={{ height: isH5() ? 38 : 60, padding: isH5() ? '0 24px' : undefined }}>
                         {t('common.save')}
                       </Button>
                     )}
                     <SlotHost
                       slot="review-button"
                       defaults={
-                        <Button onClick={() => useReviewStore.getState().startReview()} variant="outline" style={{ height: isH5() ? 38 : 60, padding: isH5() ? '0 24px' : undefined }}>
-                          {t('editor.review')}
+                        // 保存并审阅：审阅链路本身会先保存再发起（edit 页 autoSubmit 前置 doSave）
+                        <Button onClick={() => useReviewStore.getState().startReview()} variant="primary" style={{ height: isH5() ? 38 : 60, padding: isH5() ? '0 24px' : undefined }}>
+                          {t('editor.reviewAndSave')}
                         </Button>
                       }
                     />

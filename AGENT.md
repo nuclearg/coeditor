@@ -7,7 +7,8 @@
 ## 当前架构
 
 - packages/shared：共享类型 + generateId + AppSettings
-- packages/server：Hono API（RPC 风格 /api/{resource}.{action}），纯文件存储，单用户；文档模板（resources/templates/*.json，随包内联）定义文档的附件种类（大纲/世界观/人设等）与**内置审阅 prompt**（顶层按场景×风格 + 附件级，支持 `${附件type}`/`${document}`/`${currentChapter}`/`${currentParagraph}`/`${currentChapterPrevParagraphs}` 变量，由 `lib/prompt-context.ts` 在 `ai.chat` 时组装渲染）；**数据目录的一切逻辑都在 server**：解析（`COEDITOR_DATA_DIR` > 指针文件 `data-dir.json` > 平台默认）、运行时切换（`settings.update({dataDir})`）、内置模板种子（`resources/templates/`，首次运行自动写入数据目录）
+- packages/server：Hono API（RPC 风格 /api/{resource}.{action}），纯文件存储，单用户；文档模板（resources/templates/*.json，随包内联）定义文档的附件种类（大纲/世界观/人设等）与**内置审阅 prompt**（顶层按场景×风格 + 附件级，支持 `${附件type}`/`${document}`/`${currentChapter}`/`${currentParagraph}`/`${currentChapterPrevParagraphs}` 变量，由 `lib/prompt-context.ts` 在 `ai.chat` 时组装渲染）；**数据目录的一切逻辑都在 server**：解析（`COEDITOR_DATA_DIR` > 指针文件 `data-dir.json` > 平台默认）、运行时切换（`settings.update({dataDir})`）、内置模板种子（`resources/templates/`，首次运行自动写入数据目录）；**删除一律逻辑删除**：`store/file-io.ts` 的 `deleteFile`/`deleteDir` 统一 rename 进 `DATA_ROOT/.trash/`（与数据同卷 = 原子操作，命名 `<ISO时间>_<pid.ms.counter>_<原名>`，不自动清理）；`.trash` 不被任何 list 端点读取；仅写失败时清理自己的 tmp 文件用物理 unlink
+- desktop/：Tauri 2 桌面壳（sidecar 架构：Rust 拉起 Node server sidecar，loopback 同时提供 dist-h5 静态与 API）。**release 下主窗口经 External loopback URL 加载，Tauri 判为 remote origin**——`capabilities/default.json` 必须声明 `remote.urls: ["http://127.0.0.1:*"]`，否则发行版所有 IPC 被拒（dev 走 devUrl 判 local 无此问题）；`tauri.conf.json` 的 `security.csp` 对 External 页面不生效，CSP 由 sidecar 静态响应头下发（`index.ts` 的 `DESKTOP_CSP`）
 - packages/client：React SPA，**Taro 4 多端框架**（H5 + 微信小程序双端编译），组件为 Taro 原语 + 自定义 CSS（无 Radix/Tailwind），zustand 状态
 
 双端要点：

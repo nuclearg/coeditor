@@ -42,6 +42,7 @@ export default {
   'editor.unsaved': '未保存',
   'editor.saving': '保存中...',
   'editor.review': '审阅',
+  'editor.reviewAndSave': '保存并审阅',
   'editor.unsavedTitle': '当前未保存',
   'editor.unsavedHint': '当前内容尚未保存，是否保存后再切换？',
   'editor.discard': '不保存',

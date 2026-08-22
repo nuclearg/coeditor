@@ -7,6 +7,12 @@ interface TextareaProps {
   placeholder?: string
   disabled?: boolean
   autoHeight?: boolean
+  /**
+   * 输入上限（字符）。Taro Textarea 默认 maxlength=140（微信小程序原生默认），
+   * 会悄悄截断长文——这里显式放宽到与服务端一致的附件上限；
+   * 调用处可按场景覆盖（AI 输入 50000 / 段落 100000 / 附件 200000）。
+   */
+  maxLength?: number
   onChange?: (value: string) => void
   onEnter?: (withShift: boolean) => void
   className?: string
@@ -18,6 +24,7 @@ export function Textarea({
   placeholder,
   disabled,
   autoHeight,
+  maxLength = 200000,
   onChange,
   onEnter,
   className,
@@ -53,6 +60,7 @@ export function Textarea({
       placeholder={placeholder}
       disabled={disabled}
       autoHeight={autoHeight}
+      maxlength={maxLength}
       style={style}
       onInput={(e) => onChange?.(e.detail.value)}
       onConfirm={isH5() ? undefined : () => onEnter?.(false)}

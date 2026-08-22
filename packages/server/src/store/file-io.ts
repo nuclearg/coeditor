@@ -6,6 +6,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { DATA_ROOT } from './file-paths'
 
 export async function ensureDir(dirPath: string): Promise<void> {
   await fs.mkdir(dirPath, { recursive: true })
@@ -100,16 +101,34 @@ export async function writeFile(filePath: string, content: string): Promise<void
   }
 }
 
-export async function deleteFile(filePath: string): Promise<void> {
-  try { await fs.unlink(filePath) } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+/**
+ * 软删（逻辑删除铁律）：一切删除都是移入数据根下的 `.trash/`，绝不物理删。
+ * 命名 `<ISO时间>_<pid.ms.counter>_<原名>` 防碰撞；回收站不自动清理，
+ * 用户可手工找回（恢复 = 移回原路径）。与数据同根目录，保证 rename 同卷原子。
+ */
+function trashDir(): string {
+  return path.join(DATA_ROOT, '.trash')
+}
+
+async function moveToTrash(targetPath: string): Promise<void> {
+  try {
+    await fs.access(targetPath)
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return // 目标已不存在 = 原 ENOENT 容忍语义
+    throw err
   }
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const dest = path.join(trashDir(), `${stamp}_${tmpSuffix()}_${path.basename(targetPath)}`)
+  await fs.mkdir(trashDir(), { recursive: true })
+  await fs.rename(targetPath, dest)
+}
+
+export async function deleteFile(filePath: string): Promise<void> {
+  await moveToTrash(filePath)
 }
 
 export async function deleteDir(dirPath: string): Promise<void> {
-  try { await fs.rm(dirPath, { recursive: true, force: true }) } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
-  }
+  await moveToTrash(dirPath)
 }
 
 export async function listDir(dirPath: string): Promise<string[]> {
