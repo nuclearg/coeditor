@@ -54,6 +54,10 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const [error, setError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // 吸底跟随：仅当用户停留在输出底部 10px 内才自动跟随滚动；用户滚离底部后
+  // 解除吸底（不再把视角拉回底部），滚回底部 10px 内自动恢复。由滚动事件维护，
+  // 避免内容增长时把"原本就在底部"误判成"用户已离开底部"。
+  const stickToBottomRef = useRef(true)
 
   // Paragraph conversations are bucketed by the STABLE paragraphId (not
   // currentDraftId): saving a draft changes currentDraftId, which used to
@@ -124,13 +128,35 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     [activeConvId, turns],
   )
 
+  // H5：监听 AI 对话区的滚动，维护吸底状态（用户滚离底部 10px 外则停止跟随）
+  useEffect(() => {
+    if (!isH5()) return
+    const end = messagesEndRef.current
+    if (!end) return
+    // 从末尾占位元素向上找最近的滚动容器（taro-scroll-view-core，overflow-y: auto/scroll）
+    let container: HTMLElement | null = end.parentElement
+    while (container) {
+      const ov = getComputedStyle(container).overflowY
+      if (ov === 'auto' || ov === 'scroll') break
+      container = container.parentElement
+    }
+    if (!container) return
+    const onScroll = () => {
+      stickToBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 10
+    }
+    container.addEventListener('scroll', onScroll, { passive: true })
+    return () => container.removeEventListener('scroll', onScroll)
+  }, [])
+
   useEffect(() => {
     // 上下文切换后保持当前滚动位置；仅正常消息更新（发送/重试/流式）时滚到底部
     if (skipScrollRef.current) {
       skipScrollRef.current = false
       return
     }
-    if (isH5() && messagesEndRef.current) {
+    // 吸底跟随：仅当用户仍停留在底部 10px 内才滚动到底部（AI 输出不锁定视角）；
+    // 用户滚离底部后不再强制吸底，滚回底部后自动恢复跟随（由上面的 scroll 监听维护）。
+    if (isH5() && messagesEndRef.current && stickToBottomRef.current) {
       // block: nearest 只滚动最近的可滚容器，避免带动外层页面视角
       messagesEndRef.current.scrollIntoView({ behavior: streaming ? 'auto' : 'smooth', block: 'nearest' })
     }

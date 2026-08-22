@@ -46,6 +46,7 @@ export default {
   'editor.unsavedHint': '当前内容尚未保存，是否保存后再切换？',
   'editor.discard': '不保存',
   'editor.saveAndSwitch': '保存并切换',
+  'editor.draftRestored': '已恢复未保存的草稿，请记得保存',
 
   // AI 面板
   'ai.fulltextReview': '全文审阅',

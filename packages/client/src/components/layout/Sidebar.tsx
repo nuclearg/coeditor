@@ -119,6 +119,20 @@ export const Sidebar = memo(function Sidebar({
     setMenuFor(null)
   }, [docId])
 
+  // 选中的段落（含从 lastView 恢复的段落）所在章节自动展开，保证在目录树中可见
+  useEffect(() => {
+    if (!selectedParagraphId) return
+    const ch = chapters.find((c) => (paragraphsByChapter[c.id] || []).some((p) => p.id === selectedParagraphId))
+    if (!ch) return
+    setExpandedChapters((prev) => {
+      if (prev.has(ch.id)) return prev
+      const next = new Set(prev)
+      next.add(ch.id)
+      return next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedParagraphId, chapters])
+
   const confirmDeleteNow = async () => {
     if (!confirmDelete || deletingRef.current) return
     deletingRef.current = true

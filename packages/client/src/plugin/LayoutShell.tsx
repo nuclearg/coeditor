@@ -95,9 +95,14 @@ export function LayoutShell({ sidebar, editor, ai, home, content, footer, childr
   useEffect(() => {
     if (!isH5() || !sidebar || !isMobile) return
     const handler = (e: Event) => {
-      const target = e.target as HTMLElement | null
-      if (!target?.closest) return
-      if (target.closest('[data-sidebar-region], [data-sidebar-open], [data-resizable-handle]')) return
+      // 不能用 e.target.closest 判断点击是否在 sidebar 内部：点击“新建章节/段落”
+      // 这类交互时，React 会同步 flush 把被点的行替换成输入框，事件冒泡到
+      // document 时 target 已脱离 DOM（parentNode 被置空），closest 失效，
+      // 会把 sidebar 内部点击误判为外部点击而收起侧栏。
+      // composedPath() 是派发时刻的快照，无论 target 是否被移除都包含完整祖先链。
+      const path = (e.composedPath?.() || [])
+        .filter((el): el is Element => el instanceof Element)
+      if (path.some((el) => el.matches('[data-sidebar-region], [data-sidebar-open], [data-resizable-handle]'))) return
       useLayoutStore.getState().setSidebarOpen(false)
     }
     document.addEventListener('click', handler)

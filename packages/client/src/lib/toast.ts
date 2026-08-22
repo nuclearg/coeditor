@@ -15,3 +15,15 @@ export function showErrorToast(message: string): void {
     // Toast is best-effort — never let feedback itself break the flow.
   }
 }
+
+/** 中性提示（非错误），如"已恢复未保存内容"。 */
+export function showToast(message: string): void {
+  try {
+    const p = Taro.showToast({ title: message, icon: 'none', duration: 2000 })
+    if (p && typeof (p as Promise<unknown>).catch === 'function') {
+      ;(p as Promise<unknown>).catch(() => {})
+    }
+  } catch {
+    // best-effort
+  }
+}

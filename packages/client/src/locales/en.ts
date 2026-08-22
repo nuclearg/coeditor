@@ -46,6 +46,7 @@ export default {
   'editor.unsavedHint': 'You have unsaved changes. Save before switching?',
   'editor.discard': 'Discard',
   'editor.saveAndSwitch': 'Save & switch',
+  'editor.draftRestored': 'Restored unsaved draft — remember to save',
 
   // AI panel
   'ai.fulltextReview': 'Full-text Review',

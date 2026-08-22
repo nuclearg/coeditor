@@ -6,8 +6,9 @@ import {
 import type { SelectionState } from './useViewMode'
 import type { DraftItem } from '@/components/document/DraftTabs'
 import { t } from '@/lib/i18n'
-import { getCurrentDraft } from '@/lib/utils'
-import { showErrorToast } from '@/lib/toast'
+import { getCurrentDraft, isH5 } from '@/lib/utils'
+import { showErrorToast, showToast } from '@/lib/toast'
+import { getDraftSnapshot, saveDraftSnapshot, clearDraftSnapshot } from '@/lib/draftPersistence'
 import type { DocumentTemplate, Attachment } from '@coeditor/shared'
 
 /** Run async tasks with bounded concurrency (default 5). */
@@ -180,6 +181,50 @@ export function useDraftManager({
   const contentRef = useRef(content)
   contentRef.current = content
 
+  // === 本地草稿持久化（防误刷新丢内容） ===
+  // 当前编辑目标 key（`p:ch/para` 或 `a:type`），由内容同步 effect 维护
+  const targetKeyRef = useRef('')
+  // 待写入 storage 的最新内容（handleChange 时更新，防抖后落盘）
+  const pendingSnapshotRef = useRef<{ targetKey: string; content: string } | null>(null)
+  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const flushPendingSnapshot = useCallback(() => {
+    if (snapshotTimerRef.current !== null) {
+      clearTimeout(snapshotTimerRef.current)
+      snapshotTimerRef.current = null
+    }
+    const pending = pendingSnapshotRef.current
+    if (!pending || !docId) return
+    pendingSnapshotRef.current = null
+    saveDraftSnapshot(docId, pending.targetKey, pending.content)
+  }, [docId])
+
+  // 卸载/页面隐藏（H5 刷新/关闭前）立即把最后一次编辑落盘
+  useEffect(() => {
+    const onPageHide = () => flushPendingSnapshot()
+    if (isH5() && typeof window !== 'undefined') {
+      window.addEventListener('pagehide', onPageHide)
+      window.addEventListener('beforeunload', onPageHide)
+    }
+    return () => {
+      if (isH5() && typeof window !== 'undefined') {
+        window.removeEventListener('pagehide', onPageHide)
+        window.removeEventListener('beforeunload', onPageHide)
+      }
+      flushPendingSnapshot()
+    }
+  }, [flushPendingSnapshot])
+
+  // 切换编辑目标时，把上一个目标尚未落盘的编辑立即写入，避免丢失
+  const scheduleSnapshot = useCallback((targetKey: string, value: string) => {
+    pendingSnapshotRef.current = { targetKey, content: value }
+    if (snapshotTimerRef.current !== null) clearTimeout(snapshotTimerRef.current)
+    snapshotTimerRef.current = setTimeout(() => {
+      snapshotTimerRef.current = null
+      flushPendingSnapshot()
+    }, 500)
+  }, [flushPendingSnapshot])
+
   // Sync content with active draft
   const dirtyRef = useRef(false)
   const prevSelectionKeyRef = useRef('')
@@ -191,8 +236,11 @@ export function useDraftManager({
         : ''
     const selectionChanged = prevSelectionKeyRef.current !== selectionKey
     prevSelectionKeyRef.current = selectionKey
+    targetKeyRef.current = selectionKey
 
     if (selectionChanged) {
+      // 离开上一个编辑目标前，把尚未落盘的编辑写入本地存储
+      flushPendingSnapshot()
       dirtyRef.current = false
       setDirty(false)
     } else if (dirtyRef.current) {
@@ -205,9 +253,26 @@ export function useDraftManager({
       return
     }
 
-    if (editingAttachmentId) setContent(currentAttachmentDraft?.content || '')
-    else if (selection) setContent(currentDraft?.content || '')
-    else setContent('')
+    const serverContent = editingAttachmentId
+      ? currentAttachmentDraft?.content || ''
+      : selection
+        ? currentDraft?.content || ''
+        : ''
+
+    // 切到新目标时：若本地有未保存快照（误刷新/重进文档前的编辑），恢复它并标记未保存
+    if (selectionChanged && selectionKey && docId) {
+      const stored = getDraftSnapshot(docId, selectionKey)
+      if (stored && stored.content !== serverContent) {
+        setContent(stored.content)
+        setDirty(true)
+        dirtyRef.current = true
+        setContentLoading(false)
+        showToast(t('editor.draftRestored'))
+        return
+      }
+    }
+
+    setContent(serverContent)
     setContentLoading(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDraft?.id, currentAttachmentDraft?.id, editingAttachmentId, selection, draftsByParagraph, draftsByAttachment])
@@ -304,6 +369,8 @@ export function useDraftManager({
     try {
       if (editingAttachmentId) await createAttachmentDraft(docId, editingAttachmentId, snapshot)
       else if (selection) await createDraft(docId, selection.chapterId, selection.paragraphId, snapshot)
+      // 保存成功即清除本地未保存快照（内容已入服务端版本历史）
+      if (targetKeyRef.current) clearDraftSnapshot(docId, targetKeyRef.current)
       // Only clear dirty if user hasn't typed more while saving
       if (contentRef.current === snapshot) {
         setDirty(false)
@@ -358,7 +425,9 @@ export function useDraftManager({
     setContent(value)
     setDirty(true)
     dirtyRef.current = true
-  }, [])
+    // 编辑内容写入本地快照（防抖），误刷新后可恢复
+    if (targetKeyRef.current) scheduleSnapshot(targetKeyRef.current, value)
+  }, [scheduleSnapshot])
 
   // Display content
   const displayContent = viewingFullText ? fullTextContent : viewingChapterId ? chapterPreviewContent : content

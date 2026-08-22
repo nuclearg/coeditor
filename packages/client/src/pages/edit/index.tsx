@@ -12,6 +12,7 @@ import { useAttachmentStore, useLayoutStore, useEditorStore, useReviewStore } fr
 import { useI18nStore } from '@/stores/i18nStore'
 import { useViewMode, useDraftManager, useUnsavedGuard } from '@/hooks'
 import { t, localize } from '@/lib/i18n'
+import { getLastView, saveLastView, type SavedView } from '@/lib/draftPersistence'
 import { api } from '@/api/client'
 import type { Document } from '@coeditor/shared'
 
@@ -91,12 +92,54 @@ export default function DocumentEditPage() {
     api.rpc<Document>('documents.get', { docId }).then(setDoc).catch((err) => console.error('[loadDoc]', err))
   }, [docId])
 
-  // Default to the full-text view on document entry
+  // 进入文档时恢复到上次编辑位置（localStorage），让用户从上次离开的地方继续。
+  // 必须等 boot 完成（章节/段落/附件已加载）后才能校验目标是否仍然存在；
+  // 无记录或目标已失效时回退到全文视图。
   useEffect(() => {
-    if (!docId || selection || editingAttachmentId || viewingChapterId || viewingFullText) return
+    if (!docId || booting) return
+    if (selection || editingAttachmentId || viewingChapterId || viewingFullText) return
+    const saved = getLastView(docId)
+    if (saved) {
+      if (saved.type === 'paragraph') {
+        const ch = chapters.find((c) => c.id === saved.chapterId)
+        const paras = ch ? paragraphsByChapter[ch.id] || [] : []
+        if (ch && paras.some((p) => p.id === saved.paragraphId)) {
+          switchToParagraph(saved.chapterId, saved.paragraphId)
+          return
+        }
+      } else if (saved.type === 'chapter') {
+        if (chapters.some((c) => c.id === saved.chapterId)) {
+          switchToChapter(saved.chapterId)
+          return
+        }
+      } else if (saved.type === 'attachment') {
+        if (template?.attachments.some((a) => a.type === saved.attachmentId)) {
+          switchToAttachment(saved.attachmentId)
+          return
+        }
+      } else if (saved.type === 'fulltext') {
+        switchToFullText()
+        return
+      }
+    }
     switchToFullText()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docId])
+  }, [docId, booting, selection, editingAttachmentId, viewingChapterId, viewingFullText, chapters, paragraphsByChapter, template?.id])
+
+  // 视图变化时记录最后一次编辑位置（localStorage）
+  useEffect(() => {
+    if (!docId || booting) return
+    const view: SavedView | null = viewingFullText
+      ? { type: 'fulltext' }
+      : editingAttachmentId
+        ? { type: 'attachment', attachmentId: editingAttachmentId }
+        : viewingChapterId
+          ? { type: 'chapter', chapterId: viewingChapterId }
+          : selection
+            ? { type: 'paragraph', chapterId: selection.chapterId, paragraphId: selection.paragraphId }
+            : null
+    if (view) saveLastView(docId, view)
+  }, [docId, booting, selection, editingAttachmentId, viewingChapterId, viewingFullText])
 
   // Submit for AI review：订阅 startReview（公开 action，docs/plugin-v2.md §4）。
   // 流程保持：先保存（失败即止），再走 AiPanel autoSubmit 链路。
