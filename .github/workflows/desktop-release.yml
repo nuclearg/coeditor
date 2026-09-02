@@ -66,6 +66,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          projectPath: ./desktop
           tagName: ${{ github.ref_name }}
           releaseName: 'CoEditor Desktop ${{ github.ref_name }}'
           releaseBody: '开源版桌面客户端（Tauri 2，内置本地 server sidecar）。数据仅存本机。'

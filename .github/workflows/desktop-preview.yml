@@ -49,6 +49,7 @@ jobs:
       - name: Build dmg
         uses: tauri-apps/tauri-action@v0
         with:
+          projectPath: ./desktop
           args: '--bundles dmg'
 
       - name: Upload dmg artifact
