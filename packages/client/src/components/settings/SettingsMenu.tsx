@@ -49,7 +49,7 @@ interface SettingsMenuProps {
  * - 插件 menuItems / settings-menu 插槽：扩展点保留（追加区）
  */
 export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
-  const { style, setStyle, showThinking, setShowThinking } = useSettingsStore()
+  const { style, setStyle, showThinking, setShowThinking, cotSelectable } = useSettingsStore()
   const { language, setLanguage } = useI18nStore()
   const { theme, setTheme } = useTheme()
   const plugins = getPlugins()
@@ -111,7 +111,7 @@ export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
               </View>
             ))}
 
-            {/* 编辑页专属：审阅风格 + CoT 开关（放主题之后、设置页入口之前） */}
+            {/* 编辑页专属：审阅风格（主题之后、设置页入口之前） */}
             {showReviewStyle && <View className="menu-sep" />}
             {showReviewStyle && (
               <>
@@ -126,7 +126,13 @@ export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
                     <View>{option.label()}</View>
                   </View>
                 ))}
-                <View className="menu-sep" />
+              </>
+            )}
+
+            {/* 编辑页专属：CoT 思考开关（部署方可隐藏 cotSelectable=false，如 SaaS 固定不请求思考省 token） */}
+            {showReviewStyle && cotSelectable && <View className="menu-sep" />}
+            {showReviewStyle && cotSelectable && (
+              <>
                 <View className="menu-label">{t('settings.showThinking')}</View>
                 {[
                   { value: true, label: t('common.enable') },

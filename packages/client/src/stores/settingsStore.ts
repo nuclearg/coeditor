@@ -8,16 +8,20 @@ let setStyleSeq = 0
 interface SettingsStore {
   style: string
   showThinking: boolean
+  /** CoT 思考开关是否可配置/显示（部署方可关闭：SaaS 恒隐藏开关） */
+  cotSelectable: boolean
   loaded: boolean
   loadStyle: () => Promise<void>
   setStyle: (style: string) => Promise<void>
   setShowThinking: (v: boolean) => Promise<void>
+  setCotSelectable: (v: boolean) => void
   applyStyle: (style: string) => void
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   style: 'gentle',
   showThinking: true,
+  cotSelectable: true,
   loaded: false,
   loadStyle: async () => {
     if (get().loaded) return
@@ -58,6 +62,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       set({ showThinking: prev })
     }
   },
+
+  setCotSelectable: (v) => set({ cotSelectable: v }),
 
   applyStyle: (style) => set({ style }),
 }))
