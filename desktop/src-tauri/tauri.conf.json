@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CoEditor Desktop",
+  "productName": "CoEditor",
   "version": "0.1.0",
   "identifier": "net.coeditor.lite.desktop",
   "build": {

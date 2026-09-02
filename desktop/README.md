@@ -52,7 +52,7 @@ npx tauri build
 2. esbuild 打包 server 单文件
 3. `bun build --compile` 产出 sidecar → `src-tauri/binaries/coeditor-server-<triple>`
 
-产物：`src-tauri/target/release/bundle/macos/CoEditor Desktop.app` / `.dmg`。
+产物：`src-tauri/target/release/bundle/macos/CoEditor.app` / `.dmg`。
 
 ## 关键文件
 
