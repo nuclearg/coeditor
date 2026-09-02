@@ -1,0 +1,475 @@
+// H5 端尺寸覆盖层：引入移动端样式后，把字号/间距/高度覆盖为 web 常规尺寸。
+// 小程序端不加载本文件（保留 750 设计稿的移动尺寸 + rpx 缩放）。
+
+@use './app.scss';
+
+// ===== 根元素 color-scheme（防浏览器 Auto Dark 强制压黑） =====
+// 系统深色 + 浏览器"自动深色化网页"时，内核在首帧判定页面配色偏好：
+// meta 用 only light（index.html），CSS 此处与之一致声明根仅接受 light——
+// 页面自身的夜间模式由 .app.dark 的 CSS 变量自绘（显式着色不受此声明影响），
+// UA 不应替页面做强制反转/深色处理。
+html {
+  color-scheme: light;
+}
+
+// ===== Taro H5 页面栈容器铺满视口（防 navigateTo 切换闪现"下半屏渲染新页"） =====
+// 线上 DOM 结构：#app.taro_router > taro-view-core.app > div.taro_page（每页一个，
+// class 含 taro_page / taro_page_show 等）。页面容器默认无定位、按文档流垂直排列——
+// navigateTo 切换瞬间新旧页短暂共存，新页排在旧页下方（视口下半屏先渲染），随后旧页
+// 被隐藏，看起来像"新页从底部飞上来替换"。给 .taro_page 绝对定位铺满视口（相对
+// .taro_router），新页切换时原地覆盖旧页，不再上下位移。
+html,
+body,
+#app {
+  height: 100%;
+}
+
+#app.taro_router {
+  position: relative;
+}
+
+#app .taro_page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+// ===== 导入文字弹层 textarea（Taro H5 自定义元素包装） =====
+// Taro H5 会把 textarea 的 height/padding/font-size 从 style 中抽走（不落内部元素），
+// className（.import-textarea）落在包装 taro-textarea-core 上——此处命中内部原生
+// .taro-textarea 补齐布局尺寸（覆盖其 height:inherit/UA 默认两行高）
+.import-textarea .taro-textarea {
+  height: 240px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+// ===== 文本可选性 =====
+// Taro H5 运行时默认在 html / .taro-app-wrap 上设置 user-select:none
+// （移动 Web reset），导致整页文本不可选中复制（AI 气泡、章节树、正文等）。
+// 书写工具需要能选中/复制文本，这里全局恢复；交互控件（按钮/tab/菜单/图标）
+// 保留不可选中，避免连点/双击误选中。
+html,
+.taro-app-wrap,
+.app {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.btn,
+.tab,
+.menu-item,
+.menu-radio,
+.hover-accent,
+.dialog-title,
+.tab-menu {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+// ===== 基础字号与间距 =====
+.app {
+  font-size: 14px;
+}
+
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-4 { margin-bottom: 16px; }
+.ml-1 { margin-left: 4px; }
+.px-1 { padding-left: 4px; padding-right: 4px; }
+.px-2 { padding-left: 12px; padding-right: 12px; }
+.px-3 { padding-left: 16px; padding-right: 16px; }
+.px-4 { padding-left: 20px; padding-right: 20px; }
+.py-1 { padding-top: 4px; padding-bottom: 4px; }
+.py-2 { padding-top: 8px; padding-bottom: 8px; }
+.py-3 { padding-top: 12px; padding-bottom: 12px; }
+.p-3 { padding: 12px; }
+.p-4 { padding: 16px; }
+
+.text-sm { font-size: 13px; }
+.text-xs { font-size: 12px; }
+.text-base { font-size: 14px; }
+
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+
+// ===== 按钮 =====
+.btn {
+  font-size: 14px;
+  padding: 0 16px;
+  height: 36px;
+  line-height: 36px;
+  &-sm { height: 32px; padding: 0 12px; font-size: 13px; line-height: 32px; }
+  &-icon { width: 32px; height: 32px; padding: 0; }
+}
+
+// ===== 输入框 =====
+.input {
+  height: 36px;
+  line-height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.textarea {
+  padding: 8px 12px;
+  font-size: 14px;
+  min-height: 80px;
+}
+
+// 编辑器书写区：顶部贴紧 tab 指示条；左 padding 与 aipanel 气泡
+// 到边缘的距离一致（.p-3 = 12px）；行距比默认 1.7 略收紧
+.editor-textarea {
+  padding-top: 0;
+  padding-left: 12px;
+  // 右 padding 移到内层 textarea：滚动条贴面板右缘（resizer 侧无缝隙），
+  // 文本与滚动条之间的留白由内层 padding-right 提供
+  padding-right: 0;
+  line-height: 1.5;
+  border-radius: 0;
+}
+
+// 文本与滚动条之间的留白（与左侧 padding 对称）
+.editor-textarea .taro-textarea {
+  padding-right: 12px;
+}
+
+// ===== 对话框 =====
+.dialog-panel {
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.dialog-title {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+// ===== 侧滑面板 =====
+.sheet-panel {
+  width: 300px;
+}
+
+// ===== 下拉菜单 =====
+.menu-panel {
+  right: 8px;
+  top: 60px;
+  min-width: 200px;
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.menu-label {
+  font-size: 11px;
+  padding: 6px 8px 3px;
+}
+
+.menu-item {
+  padding: 7px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+.tab-menu {
+  min-width: 150px;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.menu-sep {
+  margin: 5px 0;
+}
+
+.menu-radio {
+  padding: 7px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  .dot {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--muted-fg);
+    margin-right: 8px;
+  }
+  &.checked .dot {
+    border: 4px solid var(--accent-warm);
+  }
+}
+
+// ===== 列表行 =====
+.list-item {
+  border-radius: 6px;
+  padding: 14px;
+  margin-bottom: 6px;
+}
+
+// ===== 首页（作品列表） =====
+// H5 窄屏：宽度占满；PC（≥1024px，与 useIsMobile 断点一致）：
+// 宽度对齐编辑页 AI 面板默认宽度（主区剩余 50%，主区 = 屏宽 - sidebar 260px）
+.home-page {
+  width: 100%;
+  max-width: 1280px;
+  padding: 28px 24px 48px;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .home-page {
+    max-width: calc((100vw - 260px) / 2);
+  }
+}
+
+.home-header {
+  margin-bottom: 20px;
+}
+
+.home-eyebrow {
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.home-title {
+  font-size: 26px;
+}
+
+.home-count {
+  font-size: 12px;
+  padding: 4px 14px;
+}
+
+.create-card {
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.create-card-title {
+  font-size: 16px;
+}
+
+.create-card-hint {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+// 全部作品卡片（与创建卡片同款）
+.works-card {
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.works-card-title {
+  font-size: 16px;
+}
+
+// 模板下拉（自绘面板）
+.template-options {
+  top: calc(100% + 4px);
+  max-height: 240px;
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.template-option {
+  gap: 8px;
+  padding: 9px 10px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+// 模板描述（markdown）
+.template-desc {
+  margin-top: 10px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.template-desc-line {
+  margin-bottom: 4px;
+}
+
+.doc-card {
+  gap: 12px;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  &:hover {
+    border-color: var(--accent-warm);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.doc-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+}
+
+.doc-title {
+  font-size: 15px;
+}
+
+.doc-meta {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.doc-desc {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+// 文档卡片 ⋯ 操作按钮（下拉菜单）：常显（触屏无 hover，不能靠悬停显示）；菜单浮层
+.doc-more {
+  padding: 6px;
+  cursor: pointer;
+}
+
+// 菜单点击外部遮罩（fixed 全屏，低于菜单浮层）
+.doc-menu-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+// 菜单浮层：相对 ⋯ 按钮容器，右对齐下方展开
+.doc-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 30;
+  min-width: 128px;
+  background: var(--popover);
+  color: var(--popover-fg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  padding: 4px 0;
+}
+
+.doc-menu-item {
+  padding: 9px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.doc-menu-item:hover {
+  background: var(--muted);
+}
+
+.doc-menu-item.danger {
+  color: var(--destructive);
+}
+
+.doc-loading {
+  padding: 48px 0;
+}
+
+.empty-state {
+  padding: 56px 0 40px;
+}
+
+.empty-icon {
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 13px;
+}
+
+// ===== 对话气泡 =====
+.bubble-user,
+.bubble-ai {
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.bubble-note {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.thinking-box {
+  margin-top: 6px;
+  font-size: 12px;
+  padding-left: 8px;
+}
+
+// ===== 版本 Tabs =====
+.tab {
+  padding: 7px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  // H5 悬停反馈（会话/版本 tab）
+  &:hover {
+    background: var(--accent);
+  }
+  &.active {
+    &::after {
+      height: 2px;
+      left: -3px;
+      right: -3px;
+    }
+  }
+}
+
+// scroll-view 横向滚动条占用 8px 高度，导致 tab 指示条下方出现缝隙
+.taro-scroll-view__scroll-x {
+  overflow: auto hidden;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// ===== 通用 =====
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-warm);
+}
+
+// 滚动条：跟随主题（H5 桌面端），与 sidebar/分栏 resizer 同宽（4px）
+.app ::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.app ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app ::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.app ::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-fg);
+}
+
+// ===== AI 输入框：默认与编辑器按钮区等高（40px），随内容自动长高，达上限后内部滚动 =====
+// field-sizing 需作用于内部 .taro-textarea（light DOM 可命中；不支持时退化为固定高度，无副作用）
+.ai-panel-input .taro-textarea {
+  // vertical：仅高度随内容增长，宽度保持 width:100%（content 会连宽度一起接管导致撑破布局）
+  field-sizing: vertical;
+  height: auto;
+  width: 100%;
+  max-height: 120px;
+  overflow-y: auto;
+}
