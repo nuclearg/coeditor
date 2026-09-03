@@ -2,6 +2,7 @@ import { Image, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ResizablePanel } from '@/components/ui/Resizable'
+import { Icon } from '@/components/ui/Icon'
 import { SettingsMenu } from '@/components/settings/SettingsMenu'
 import { SlotHost } from '@/plugin/SlotHost'
 import { useLayoutStore, type PageVariant } from '@/stores/layoutStore'
@@ -146,7 +147,8 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
               data-sidebar-open="true"
               onClick={(e) => { e.stopPropagation(); useLayoutStore.getState().setSidebarOpen(true) }}
             >
-              <Image src={logo} mode="aspectFit" style={{ width: isH5() ? 24 : 36, height: isH5() ? 24 : 36 }} />
+              {/* 收起态左侧：菜单图标（语义为“展开侧栏”，点击展开） */}
+              <Icon name="menu" size={isH5() ? 18 : 30} color="var(--muted-fg)" />
             </View>
           )}
           {breadcrumb && (
