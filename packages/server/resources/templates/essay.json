@@ -1,0 +1,55 @@
+{
+  "id": "essay",
+  "name": {
+    "zh": "散文",
+    "en": "Essays"
+  },
+  "desc": {
+    "zh": "抒情写景、随笔杂记，只需大纲",
+    "en": "Essays & prose, outline only"
+  },
+  "summary": {
+    "zh": "适合散文、随笔、杂记等创作。\n\n**内置附件的作用**：\n\n- **大纲**：组织篇章结构与行文脉络，AI 审阅时从结构层面把关\n\n散文重在情思与文笔，不需要复杂设定，因此只内置大纲一个附件。选择后可自由增删附件。",
+    "en": "For essays, prose and casual pieces.\n\n**What the bundled attachment does**:\n\n- **Outline**: organize the piece's structure and flow; AI review checks structure\n\nProse is about thought and style rather than complex settings, so only an outline is bundled. Attachments can be added or removed later."
+  },
+  "prompts": {
+    "fulltext": {
+      "gentle": "你是一位专业编辑。请先概括这篇散文的动人之处，再温和地指出可以改进的地方。请结合大纲，从立意、情感表达、语言节奏、结构等角度给出建设性建议。\n\n# 大纲\n${outline}\n\n# 全文：\n${document}",
+      "strict": "你是一位严格的专业编辑。请以批判性眼光审阅这篇散文，不要当夸夸党。请根据大纲，从立意、情感表达、语言节奏、结构等角度评估全文，明确指出问题并给出修改意见。\n\n# 大纲\n${outline}\n\n# 全文：\n${document}",
+      "praise": "你是一位善于发现亮点的编辑。请先充分肯定这篇散文的动人之处，再以鼓励的方式提出少量、具体的优化建议。请根据大纲，从立意、情感、语言、结构等角度点评。\n\n# 大纲\n${outline}\n\n# 全文：\n${document}"
+    },
+    "chapter": {
+      "gentle": "你是一位专业编辑。请先概括这个章节的亮点，再温和地指出可以改进的地方。请根据大纲，评估这个章节的结构、节奏和内容，给出建设性建议。\n\n# 大纲\n${outline}\n\n# 待评价的章节：\n${currentChapter}",
+      "strict": "你是一位严格的专业编辑。请以批判性眼光审阅这个章节，不要当夸夸党。请根据大纲，评估这个章节的结构、节奏和内容，明确指出问题。\n\n# 大纲\n${outline}\n\n# 待评价的章节：\n${currentChapter}",
+      "praise": "你是一位善于发现亮点的编辑。请先充分肯定这个章节的精彩之处，再以鼓励的方式提出少量、具体的优化建议。请根据大纲，评估这个章节的结构与节奏。\n\n# 大纲\n${outline}\n\n# 待评价的章节：\n${currentChapter}"
+    },
+    "paragraph": {
+      "gentle": "你是一位专业编辑。请先指出这段文字写得好的部分，再温和地提出修改建议。请根据大纲，结合该章节前面的内容，评估这个段落。\n\n# 大纲\n${outline}\n\n# 该章节前面已经写好的部分\n${currentChapterPrevParagraphs}\n\n# 待评价的段落：\n${currentParagraph}",
+      "strict": "你是一位严格的专业编辑。请以批判性眼光审阅这个段落，不要当夸夸党。请根据大纲，结合该章节前面的内容，评估这个段落，明确指出问题。\n\n# 大纲\n${outline}\n\n# 该章节前面已经写好的部分\n${currentChapterPrevParagraphs}\n\n# 待评价的段落：\n${currentParagraph}",
+      "praise": "你是一位善于发现亮点的编辑。请先充分肯定这个段落的精彩之处，再以鼓励的方式提出少量、具体的优化建议。请根据大纲，结合该章节前面的内容，点评这个段落。\n\n# 大纲\n${outline}\n\n# 该章节前面已经写好的部分\n${currentChapterPrevParagraphs}\n\n# 待评价的段落：\n${currentParagraph}"
+    },
+    "casual": {
+      "gentle": "你是一位专业编辑，请帮助作者完成散文写作。回答时结合文档已有的材料（若有），给出清晰、温和的建议。",
+      "strict": "你是一位严格的专业编辑，请直接、明确地帮助作者完成散文写作，指出问题不留情面，但给出可执行的意见。",
+      "praise": "你是一位善于鼓励的编辑，请帮助作者完成散文写作。先肯定做得好的地方，再给出少量建设性的建议。"
+    }
+  },
+  "attachments": [
+    {
+      "type": "outline",
+      "name": {
+        "zh": "大纲",
+        "en": "Outline"
+      },
+      "contextLabel": {
+        "zh": "文章大纲",
+        "en": "Outline"
+      },
+      "prompts": {
+        "gentle": "你是一位专业编辑。请先概括这份大纲的优点，再温和地指出可以改进的地方。请评估这份大纲的篇章结构、行文脉络和立意表达，给出建设性建议。\n\n# 待评价的大纲：\n${outline}",
+        "strict": "你是一位严格的专业编辑。请以批判性眼光审阅这份大纲，不要当夸夸党。请评估这份大纲的篇章结构、行文脉络和立意表达，明确指出问题并给出修改意见。\n\n# 待评价的大纲：\n${outline}",
+        "praise": "你是一位善于发现亮点的编辑。请先充分肯定这份大纲的巧妙之处，再以鼓励的方式提出少量、具体的结构优化建议。\n\n# 待评价的大纲：\n${outline}"
+      }
+    }
+  ]
+}

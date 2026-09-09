@@ -1,0 +1,22 @@
+{
+  "miniprogramRoot": "dist-weapp/",
+  "projectname": "coeditor",
+  "description": "CoEditor AI 辅助写作工具",
+  "appid": "touristappid",
+  "setting": {
+    "urlCheck": false,
+    "es6": false,
+    "enhance": false,
+    "compileHotReLoad": false,
+    "postcss": false,
+    "minified": false
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.0.0",
+  "srcMiniprogramRoot": "dist-weapp/",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "condition": {}
+}

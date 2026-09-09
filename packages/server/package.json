@@ -1,0 +1,28 @@
+{
+  "name": "@coeditor/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "COEDITOR_DATA_DIR=../../data tsx watch src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/server/src/index.js",
+    "start": "NODE_ENV=production COEDITOR_DATA_DIR=../../data node dist/server/src/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@coeditor/shared": "workspace:*",
+    "@hono/node-server": "^1.13.0",
+    "fflate": "^0.8.2",
+    "hono": "^4.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
