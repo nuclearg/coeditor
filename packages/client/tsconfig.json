@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "removeComments": false,
+    "preserveConstEnums": true,
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "typeRoots": ["node_modules/@types"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@coeditor/shared": ["../shared/src/types.ts"],
+      "@plugin-registry": ["./src/plugin/registry.ts"]
+    },
+    "skipLibCheck": true
+  },
+  "include": ["./src", "./config", "./types"],
+  "exclude": ["src/**/__tests__"],
+  "compileOnSave": false
+}
