@@ -5,7 +5,7 @@
   "description": "CoEditor 桌面客户端（Tauri 2 壳，内置本地 server sidecar）",
   "scripts": {
     "tauri": "tauri",
-    "icon": "node scripts/gen-icon.mjs && tauri icon icon-src.png"
+    "icon": "tauri icon ../icon.png"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.0"
