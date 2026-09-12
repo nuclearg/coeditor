@@ -76,7 +76,7 @@ export default {
   'ai.reviewPlaceholder': '询问编辑建议...',
   'ai.questionPlaceholder': '向 AI 提问...',
   'ai.reviewRequest': '请提出意见和建议。',
-  'ai.disclaimer': '本回答由 AI 生成，内容仅供参考，请仔细甄别',
+  'ai.disclaimer': '本回答由 AI 编辑提供，内容仅供参考，请仔细甄别',
 
   // 草稿版本
   'drafts.noHistory': '暂无历史版本',

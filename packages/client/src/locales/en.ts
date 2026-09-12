@@ -76,7 +76,7 @@ export default {
   'ai.reviewPlaceholder': 'Ask for editing advice...',
   'ai.questionPlaceholder': 'Ask the AI...',
   'ai.reviewRequest': 'Please review and give suggestions.',
-  'ai.disclaimer': 'This answer is AI-generated and for reference only. Please verify carefully.',
+  'ai.disclaimer': 'This answer is provided by the AI editor and for reference only. Please verify carefully.',
 
   // Draft versions
   'drafts.noHistory': 'No version history',
