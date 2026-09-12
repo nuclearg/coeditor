@@ -11,6 +11,8 @@ interface ApiSuccess<T> {
 interface ApiError {
   success: false
   error: string
+  /** 业务错误码（后端 Result.errCode，如 InsufficientCredit）；开源版服务端不下发，故可选 */
+  errCode?: string
 }
 
 type ApiResponse<T> = ApiSuccess<T> | ApiError
@@ -93,6 +95,7 @@ async function rpc<T>(action: string, params: object = {}, retried = false): Pro
     success: result.success,
     data: result.success ? result.data : undefined,
     error: result.success ? undefined : (result as ApiError).error,
+    errCode: result.success ? undefined : (result as ApiError).errCode,
     action,
   }
   const { handled, retry } = await notifyResponse(rpcResp)

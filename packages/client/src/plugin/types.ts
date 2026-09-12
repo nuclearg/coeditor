@@ -186,4 +186,14 @@ export interface RpcResponse {
   readonly data?: unknown
   readonly error?: string
   readonly action: string
+  /**
+   * 业务错误码（后端 `Result.errCode`，如 `InsufficientCredit`）。
+   *
+   * 用于让插件按**机器码**分支处理，而不是去匹配 {@link error} 里的用户文案——
+   * 文案随语言变化且随时可能改，按文案判断迟早失效。
+   *
+   * 可选：仅当服务端下发该字段时存在（开源版服务端不返回，此时为 undefined，
+   * 插件行为与加此字段之前完全一致）。
+   */
+  readonly errCode?: string
 }
