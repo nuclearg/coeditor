@@ -76,9 +76,14 @@ async function streamH5(
 
   const contentType = res.headers.get('content-type') || ''
   if (contentType.includes('application/json')) {
-    const result = await res.json() as { success?: boolean; error?: string }
+    const result = await res.json() as { success?: boolean; error?: string; errCode?: string }
     if (result.success === false) {
-      const { handled, retry } = await notifyResponse({ success: false, error: result.error, action: 'ai.chat' })
+      const { handled, retry } = await notifyResponse({
+        success: false,
+        error: result.error,
+        errCode: result.errCode,
+        action: 'ai.chat',
+      })
       if (handled) {
         // 插件静默续期成功：用新 token 重试一次流（否则过期 token 会静默丢掉这次提问）
         if (retry && !retried) return streamH5(params, callbacks, signal, true)
@@ -175,11 +180,16 @@ async function streamWeapp(
           finish(state.content, state.thinking)
           return
         }
-        // Non-streaming JSON error responses (rate limit, validation, no API key)
+        // Non-streaming JSON error responses (rate limit, validation, no API key, insufficient credit)
         if (res.data && typeof res.data === 'object' && !ArrayBuffer.isView(res.data)) {
-          const body = res.data as { success?: boolean; error?: string }
+          const body = res.data as { success?: boolean; error?: string; errCode?: string }
           if (body.success === false) {
-            const { handled, retry } = await notifyResponse({ success: false, error: body.error, action: 'ai.chat' })
+            const { handled, retry } = await notifyResponse({
+              success: false,
+              error: body.error,
+              errCode: body.errCode,
+              action: 'ai.chat',
+            })
             if (handled) {
               // 插件静默续期成功：用新 token 重试一次流（否则过期 token 会静默丢掉这次提问）
               if (retry && !retried) {
