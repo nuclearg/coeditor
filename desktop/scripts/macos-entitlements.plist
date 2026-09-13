@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ad-hoc 重签用的 entitlements。
+
+  为什么需要：
+    CoEditor 桌面端内含 WebKit(WKWebView) + 一个独立 sidecar 进程（coeditor-server）。
+    在 Apple Silicon 上，带 hardened runtime 的包若缺少下列权限，会在运行期被系统拒绝：
+      - allow-jit / allow-unsigned-executable-memory：JavaScriptCore 需要 JIT 与可写可执行内存
+      - disable-library-validation：允许加载非同一 Team ID 签名的内嵌库
+        （本项目 ad-hoc 签名，没有 Team ID，不放开会导致内嵌组件加载失败）
+    这份清单与支付宝官方密钥工具（同样是 Electron/WebKit 类应用）实际携带的权限一致。
+
+  注意：
+    这是 ad-hoc（本机自签）路径的最小放开。正式分发（Developer ID + 公证）
+    应使用更严格的官方 entitlements，不要沿用本文件。
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

@@ -17,6 +17,9 @@
   "bundle": {
     "active": true,
     "targets": ["app", "dmg"],
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "externalBin": ["binaries/coeditor-server"],
     "resources": {
       "../../packages/client/dist-h5": "dist-h5"
