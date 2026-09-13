@@ -122,7 +122,7 @@ export default {
   'home.import': 'Import',
   'home.importText': 'Import Text',
   'home.importFile': 'Import File',
-  'home.importing': 'AI analyzing…',
+  'home.importing': 'Importing…',
   'home.importTooLarge': 'Content too long (max 100,000 chars). Please split it first',
   'home.importFailed': 'Import failed',
   'home.exportFailed': 'Export failed',

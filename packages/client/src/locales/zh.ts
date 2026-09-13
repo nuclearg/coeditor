@@ -122,7 +122,7 @@ export default {
   'home.import': '导入',
   'home.importText': '导入文字',
   'home.importFile': '导入文件',
-  'home.importing': 'AI 分析中…',
+  'home.importing': '导入中…',
   'home.importTooLarge': '内容过长（上限 10 万字），请拆分后重试',
   'home.importFailed': '导入失败',
   'home.exportFailed': '导出失败',

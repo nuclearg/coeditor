@@ -268,18 +268,12 @@ page {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
 }
 
 // 遮罩内菊花：改浅色边框，深色遮罩上更清晰（覆盖 .spinner 默认边框色）
 .import-overlay .spinner {
   border-color: rgba(255, 255, 255, 0.3);
   border-top-color: #fff;
-}
-
-.import-overlay-text {
-  font-size: 28px;
-  color: #fff;
 }
 
 // ===== 侧滑面板 =====

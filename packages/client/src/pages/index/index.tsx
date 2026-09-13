@@ -548,11 +548,11 @@ export default function DocumentListPage() {
         </View>
       </Dialog>
 
-      {/* AI 导入中：全屏菊花浮层盖住整页（防滚动/误操作，跨端一致） */}
+      {/* 导入中：全屏菊花浮层盖住整页（防滚动/误操作，跨端一致）。
+          只留菊花、不放文案：这一步本就是在等，写「AI 分析中」既多余又刻意。 */}
       {importing && (
         <View className="import-overlay">
           <View className="spinner" />
-          <View className="import-overlay-text">{t('home.importing')}</View>
         </View>
       )}
     </LayoutShell>
