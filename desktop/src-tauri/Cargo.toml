@@ -11,6 +11,16 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+# 关键：Tauri 用 cfg(dev) 区分「连 dev server」和「跑打包好的前端」，判据是
+#   dev = !custom-protocol          （见 tauri/build.rs）
+# `tauri build`（CLI）会自动加 --features custom-protocol，但**直接跑
+# `cargo build --release` 不会**——那样编出来的 release 二进制会走 dev 分支
+# （不拉 sidecar、连 localhost:5173），本地自测时极易误判。
+# 显式声明该 feature 后，本地可 `cargo build --release --features custom-protocol`
+# 得到与发布版一致的行为。
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
@@ -19,3 +29,13 @@ tauri-plugin-dialog = "2"
 sys-locale = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# 启动期致命错误需要弹出原生对话框：Windows 发布版是 GUI 子系统（windows_subsystem="windows"），
+# 没有控制台，eprintln / panic 消息用户完全看不见（这正是「缺 WebView2 时静默失败」的根因）。
+# 用 windows-sys 而非 windows crate：只为一个 MessageBoxW，避免引入大依赖。
+# 注意 0.6x 起 HWND / MESSAGEBOX_STYLE / MB_* 等基础类型在 Win32_Foundation，必须一并声明该 feature。
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+] }
