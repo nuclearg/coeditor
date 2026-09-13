@@ -370,7 +370,7 @@ export const Sidebar = memo(function Sidebar({
         return (
           <View
             key={def.type}
-            className={cn('flex items-center gap-2 px-1 py-1 text-sm rounded', editingAttachmentId === def.type && 'bg-accent')}
+            className={cn('flex items-center gap-2 px-1 py-1 text-sm rounded', editingAttachmentId === def.type && 'active-node')}
             style={{ marginTop: 4 }}
             onClick={() => onSelectAttachment(def.type)}
           >
@@ -387,7 +387,7 @@ export const Sidebar = memo(function Sidebar({
 
   const renderFulltextEntry = () => (
     <View
-      className={cn('flex items-center gap-2 px-1 py-1 text-sm rounded', viewingFullText && 'bg-accent')}
+      className={cn('flex items-center gap-2 px-1 py-1 text-sm rounded', viewingFullText && 'active-node')}
       style={{ marginTop: 4 }}
       onClick={onSelectFullText}
     >
@@ -466,7 +466,7 @@ export const Sidebar = memo(function Sidebar({
               return (
                 <View key={chapter.id}>
                   {/* Chapter row */}
-                  <View className={cn('relative flex items-center gap-1 px-1 py-1 text-sm rounded', viewingChapterId === chapter.id && 'bg-accent')}>
+                  <View className={cn('relative flex items-center gap-1 px-1 py-1 text-sm rounded', viewingChapterId === chapter.id && 'active-node')}>
                     <View className="hover-accent rounded" style={{ padding: 4 }} onClick={() => toggleChapter(chapter.id)}>
                       <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} size={iconSize(26)} color="var(--muted-fg)" />
                     </View>
@@ -531,7 +531,7 @@ export const Sidebar = memo(function Sidebar({
                         const curDraft = getCurrentDraft(paraDrafts, para.currentDraftId)
                         const charCountNum = curDraft ? charCount(curDraft.content) : 0
                         return (
-                          <View key={para.id} className={cn('relative flex items-center gap-1 px-1 py-1 text-sm rounded', selectedParagraphId === para.id && 'bg-accent')}>
+                          <View key={para.id} className={cn('relative flex items-center gap-1 px-1 py-1 text-sm rounded', selectedParagraphId === para.id && 'active-node')}>
                             {isRenaming ? (
                               <Input
                                 className="flex-1"

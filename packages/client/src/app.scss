@@ -115,6 +115,28 @@ page {
 .border-b { border-bottom: 1px solid var(--border); }
 .border-r { border-right: 1px solid var(--border); }
 .bg-accent { background-color: var(--accent); }
+/*
+ * 侧边栏「当前正在查看的节点」高亮（章节 / 段落 / 附件 / 全文）。
+ *
+ * 为什么不用现成的 .bg-accent：--accent（#efefee / #222）与侧边栏底色 --muted
+ * （#f1f1f0 / #232323）几乎同色，铺上去等于没高亮——这正是改造前的问题。
+ *
+ * 为什么用 color-mix 而不是直接 background: var(--primary)：--primary 是淡土黄
+ * #e2d1a6，在浅色下铺底尚可、在暗色下是「亮色块配浅灰字」，对比度不足。
+ * 与底色混合后，浅色下得到淡黄底、暗色下得到暖色淡底，文字都用 --fg，两种主题都够看。
+ *
+ * !important 是必要的：行上的 .rounded（border-radius）与内联 style 之后还有
+ * 兄弟工具类，靠它稳定压过 .bg-accent 这类零散样式，避免以后顺序一变就失效。
+ */
+.active-node {
+  /*
+   * 回退：不支持 color-mix 的环境（小程序 WXSS 尤其可能）用实色。
+   * 只给 background 这一个属性，后一行支持时会被覆盖；不支持时整条丢弃、保留本行。
+   */
+  background: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 22%, transparent) !important;
+  border-radius: 6px;
+}
 .gap-1 { gap: 8px; }
 .gap-2 { gap: 16px; }
 .gap-3 { gap: 24px; }
