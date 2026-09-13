@@ -52,6 +52,23 @@ jobs:
           projectPath: ./desktop
           args: '--bundles dmg'
 
+      # 签名闸门：坏签名的包用户根本无法运行（内核 SIGKILL，连「仍要打开」都不出现）。
+      # tauri.conf.json 已配 bundle.macOS.signingIdentity="-"（ad-hoc），此处校验并兜底重签。
+      # 校验失败即中断，避免把打不开的包传出去。
+      - name: Verify macOS signature (fail closed)
+        working-directory: desktop
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          targets=(src-tauri/target/release/bundle/macos/*.app src-tauri/target/release/bundle/dmg/*.dmg)
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo "未找到任何 .app/.dmg 产物" >&2; exit 1
+          fi
+          for t in "${targets[@]}"; do
+            echo "==> 校验 $t"
+            bash scripts/verify-macos-signature.sh "$t"
+          done
+
       - name: Upload dmg artifact
         uses: actions/upload-artifact@v6
         with:

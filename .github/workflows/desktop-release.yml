@@ -89,6 +89,24 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
+      # 签名闸门：坏签名的包用户根本无法运行（内核 SIGKILL，连「仍要打开」都不出现）。
+      # tauri.conf.json 已配 bundle.macOS.signingIdentity="-"（ad-hoc），此处校验并兜底重签。
+      # 用 shell（而非 tauri-action）跑 tauri build 时设置 signingIdentity 也一样生效。
+      - name: Verify macOS signature (fail closed)
+        if: matrix.platform != 'windows-latest'
+        working-directory: desktop
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          targets=(src-tauri/target/release/bundle/macos/*.app src-tauri/target/release/bundle/dmg/*.dmg)
+          if [ ${#targets[@]} -eq 0 ]; then
+            echo "未找到任何 .app/.dmg 产物" >&2; exit 1
+          fi
+          for t in "${targets[@]}"; do
+            echo "==> 校验 $t"
+            bash scripts/verify-macos-signature.sh "$t"
+          done
+
       # ---- Windows：出 NSIS 安装版（-setup.exe）+ zip 便携包（-portable.zip）----
       # 便携包 = 把 NSIS 静默安装到临时目录（布局与真实安装一致），再打成 zip；
       # 不再依赖 7-Zip / 自解压 SFX。

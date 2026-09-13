@@ -54,11 +54,46 @@ npx tauri build
 
 产物：`src-tauri/target/release/bundle/macos/CoEditor.app` / `.dmg`。
 
+## macOS 签名（易踩的坑）
+
+`tauri.conf.json` 配了 `bundle.macOS.signingIdentity = "-"`（**ad-hoc 签名**），这是 Apple Silicon 上的硬要求：
+未签名的包会被系统直接 SIGKILL，用户双击、Cmd+O、右键「打开」全部无效。
+
+**坏签名比未公证严重得多**，两者别混为一谈：
+
+| 状态 | 用户表现 | 用户能否自救 |
+|---|---|---|
+| **坏签名**（`Sealed Resources=none`，签名声称有资源但实际没有） | 内核 SIGKILL，**连「仍要打开」按钮都不出现** | ❌ 完全无法运行 |
+| 未公证（签名有效但无公证票据） | 弹「无法验证开发者」 | ✅ 系统设置 → 隐私与安全性 → 仍要打开 |
+| 有效签名 + 公证 | 无任何提示 | — |
+
+历史上 Tauri 产出过坏签名（`code has no resources but signature indicates they must be present`），
+所以加了**校验闸门**（CI 两个 workflow 都会跑，失败即中断，禁止把打不开的包发出去）：
+
+```bash
+cd desktop
+bash scripts/verify-macos-signature.sh src-tauri/target/release/bundle/dmg/CoEditor.dmg
+```
+
+- 脚本会挂载 dmg、取出 `.app`、做 `codesign --verify --deep --strict`，并断言资源**已封存**
+- ad-hoc 模式下校验失败会**自动按正确顺序重签**（先 sidecar、后 bundle，否则资源封存失效）
+- `AUTO_REPAIR=0` 只校验不改动（CI 严格模式）
+- 退出码：`0` 通过 / `1` 校验失败 / `2` 参数错误
+
+> 注意：脚本刻意用 **bash 3.2 兼容**写法（macOS 自带版本）。**不要**用 `;;&`、`${var^^}` 等 bash 4+ 语法，
+> 也不要把 `$VAR` 直接紧跟中文全角标点（如 `（$APP）`），bash 3.2 会把全角字符当成变量名的一部分而报
+> unbound variable。需要相邻时一律写 `${APP}`。
+
+**正式分发仍需** Apple Developer ID 签名 + 公证（$99/年）——ad-hoc 签名无法免除用户在
+「隐私与安全性」中手动放行这一步。
+
 ## 关键文件
 
 | 路径 | 说明 |
 |---|---|
-| `src-tauri/tauri.conf.json` | 窗口/捆绑配置；`externalBin` + `resources`（dist-h5） |
+| `src-tauri/tauri.conf.json` | 窗口/捆绑配置；`externalBin` + `resources`（dist-h5）+ `macOS.signingIdentity`（ad-hoc） |
+| `scripts/verify-macos-signature.sh` | 签名校验闸门（CI 失败即中断）+ ad-hoc 重签修复 |
+| `scripts/macos-entitlements.plist` | ad-hoc 重签用 entitlements（WebKit JIT / 内嵌库加载；正式分发勿沿用） |
 | `src-tauri/src/lib.rs` | sidecar 生命周期：随机端口 → 拉起（传 `COEDITOR_WEB_ROOT`）→ 就绪探测 → 退出 kill；**不涉及数据目录逻辑** |
 | `../packages/server/src/index.ts` | `COEDITOR_WEB_ROOT` 静态服务（单端口同源，桌面壳专用） |
 | `../packages/server/resources/` | 内置种子资源（templates/*.json，含审阅 prompt），构建时内联 |
@@ -79,5 +114,8 @@ npx tauri build
 ## 已知限制 / 后续
 
 - macOS 先行；Windows/Linux 需在 `tauri.conf.json` 调整 CSP 与 targets，并在 CI 矩阵补构建
-- 发布分发需 Apple Developer ID 签名 + 公证（本机自用无需）
+- **发布分发需 Apple Developer ID 签名 + 公证（$99/年）**：当前仅 ad-hoc 签名，用户首次打开需在
+  「系统设置 → 隐私与安全性 → 仍要打开」放行一次；未公证的包无法做到零摩擦
+- Windows 侧尚未签名：`coeditor-server.exe`（sidecar）与 NSIS setup 需分别 Authenticode 签名，
+  否则 SmartScreen 红屏；OV 证书约 $150–300/年，**别买 EV**（2024 起不再有即时信任待遇）
 - 自更新（tauri-updater）未启用
