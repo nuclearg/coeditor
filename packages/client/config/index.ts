@@ -23,10 +23,14 @@ function includeSharedSrc(chain: any) {
 // 与 client 自身的副本形成两份实例。React 双实例会让 hooks dispatcher 为 null
 // （运行时表现：Cannot read properties of null (reading 'useState')）。
 // 这里统一钉到 client 自己的副本——开源版本来就只有一份，属幂等兜底。
-// 只钉纯 JS 单例，不动 @tarojs/*（平台插件会按端改写它们的解析）。
+//
+// 不要钉 react-dom：Taro 生成的入口本身就 `import ReactDOM from 'react-dom'`
+// 并交给 createReactApp，小程序端由 Taro 自己处理这个标识符。一旦在此覆盖，
+// 会把真正的 react-dom 拽进小程序包——它的 host config 会访问
+// window.HTMLIFrameElement，运行时抛
+// "TypeError: Right-hand side of 'instanceof' is not an object"。
 const singletonAlias = {
   react: path.dirname(require.resolve('react')),
-  'react-dom': path.dirname(require.resolve('react-dom')),
   zustand: path.dirname(require.resolve('zustand')),
 }
 
@@ -85,6 +89,12 @@ export default defineConfig(async () => {
       ...({ outputRoot: 'dist-weapp' }),
       webpackChain(chain) {
         includeSharedSrc(chain)
+        // 注意：这里**不要**为 react-dom 设置任何 alias。
+        // Taro 生成的入口是 `import ReactDOM from 'react-dom'` + `createReactApp(React, ReactDOM, config)`，
+        // 小程序端由 Taro 自己接管该标识符（产物中不含 react-dom）。
+        // 一旦覆盖成真实包路径或 false：前者会把 react-dom 拽进产物并在运行时抛
+        // "Right-hand side of 'instanceof' is not an object"（其 host config 访问
+        // window.HTMLIFrameElement）；后者会连 Taro 的 React 渲染器一起删掉。
       },
       postcss: {
         pxtransform: {
