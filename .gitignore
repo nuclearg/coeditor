@@ -149,6 +149,12 @@ vite.config.ts.timestamp-*
 packages/client/dist-h5/
 packages/client/dist-weapp/
 
+# 微信开发者工具工程描述文件（含 appid）不属于开源版：
+# 由 SaaS 宿主（coeditor-saas）构建时按模板生成，故此处忽略以保持工作区干净。
+# project.private.config.json 是开发者工具自己写的个人配置（官方建议入库前忽略）。
+packages/client/project.config.json
+packages/client/project.private.config.json
+
 # macOS
 .DS_Store
 .AppleDouble

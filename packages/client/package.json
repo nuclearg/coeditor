@@ -4,10 +4,8 @@
   "private": true,
   "scripts": {
     "build:h5": "taro build --type h5",
-    "build:weapp": "taro build --type weapp",
     "build": "taro build --type h5",
     "dev": "taro build --type h5 --watch",
-    "dev:weapp": "taro build --type weapp --watch",
     "typecheck": "tsc --noEmit",
     "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
     "test": "vitest run",

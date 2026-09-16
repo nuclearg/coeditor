@@ -9,14 +9,14 @@
 - packages/shared：共享类型 + generateId + AppSettings
 - packages/server：Hono API（RPC 风格 /api/{resource}.{action}），纯文件存储，单用户；文档模板（resources/templates/*.json，随包内联）定义文档的附件种类（大纲/世界观/人设等）与**内置审阅 prompt**（顶层按场景×风格 + 附件级，支持 `${附件type}`/`${document}`/`${currentChapter}`/`${currentParagraph}`/`${currentChapterPrevParagraphs}` 变量，由 `lib/prompt-context.ts` 在 `ai.chat` 时组装渲染）；**数据目录的一切逻辑都在 server**：解析（`COEDITOR_DATA_DIR` > 指针文件 `data-dir.json` > 平台默认）、运行时切换（`settings.update({dataDir})`）、内置模板种子（`resources/templates/`，首次运行自动写入数据目录）；**删除一律逻辑删除**：`store/file-io.ts` 的 `deleteFile`/`deleteDir` 统一 rename 进 `DATA_ROOT/.trash/`（与数据同卷 = 原子操作，命名 `<ISO时间>_<pid.ms.counter>_<原名>`，不自动清理）；`.trash` 不被任何 list 端点读取；仅写失败时清理自己的 tmp 文件用物理 unlink
 - desktop/：Tauri 2 桌面壳（sidecar 架构：Rust 拉起 Node server sidecar，loopback 同时提供 dist-h5 静态与 API）。**release 下主窗口经 External loopback URL 加载，Tauri 判为 remote origin**——`capabilities/default.json` 必须声明 `remote.urls: ["http://127.0.0.1:*"]`，否则发行版所有 IPC 被拒（dev 走 devUrl 判 local 无此问题）；`tauri.conf.json` 的 `security.csp` 对 External 页面不生效，CSP 由 sidecar 静态响应头下发（`index.ts` 的 `DESKTOP_CSP`）
-- packages/client：React SPA，**Taro 4 多端框架**（H5 + 微信小程序双端编译），组件为 Taro 原语 + 自定义 CSS（无 Radix/Tailwind），zustand 状态
+- packages/client：React SPA，**Taro 4 多端框架**（源码保持 H5 + 微信小程序双端），组件为 Taro 原语 + 自定义 CSS（无 Radix/Tailwind），zustand 状态。**开源版只构建 H5**（配合桌面壳），小程序构建入口不在本仓库
 
 双端要点：
 - API 走相对路径 `/api/*`，同域或反代（H5：fetch；小程序：Taro.request）
 - AI 流式（SSE）：`api/stream.ts` 双端适配（H5 fetch + ReadableStream / 小程序 wx.request enableChunked）
 - markdown：H5 用 react-markdown（.md-content 排版样式），小程序用 marked + @tarojs/plugin-html 渲染
 - `@coeditor/shared` 在构建时 alias 直接指向 `packages/shared/src/types.ts`（单一来源，无副本）；Taro 的 `compile.include` 不生效，改由 `config/index.ts` 的 `webpackChain`（`includeSharedSrc`）把 shared 源码目录加进 babel-loader 的 include
-- 构建：`build:h5`（产物 dist-h5）/ `build:weapp`（产物 dist-weapp），小程序用微信开发者工具导入
+- 构建：`build:h5`（产物 dist-h5）。**开源版不产出小程序包**：`build:weapp` / `dev:weapp` 脚本与 `project.config.json`（含微信 appid）均不在本仓库。微信小程序由 SaaS 宿主（coeditor-saas，以 git submodule 引用本仓库源码）自行驱动 `taro build --type weapp`，appid 由 SaaS 侧提供；源码中的双端分支与 `@tarojs/plugin-platform-weapp` 依赖即为此保留（Taro 本身不读 `project.config.json`，该文件仅供微信开发者工具使用）
 - 后端地址约定：前端始终用相对路径 `/api/*`，由部署方保证同域或反代，不做编译时注入
 
 ## 前端插件机制（v2）
