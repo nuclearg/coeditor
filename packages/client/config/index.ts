@@ -19,6 +19,17 @@ function includeSharedSrc(chain: any) {
   for (const p of pluginExtraIncludes) chain.module.rule('script').include.add(path.resolve(p))
 }
 
+// 单例包：仓库外插件（PLUGIN_EXTRA_INCLUDE）会从插件自己的 node_modules 解析这些包，
+// 与 client 自身的副本形成两份实例。React 双实例会让 hooks dispatcher 为 null
+// （运行时表现：Cannot read properties of null (reading 'useState')）。
+// 这里统一钉到 client 自己的副本——开源版本来就只有一份，属幂等兜底。
+// 只钉纯 JS 单例，不动 @tarojs/*（平台插件会按端改写它们的解析）。
+const singletonAlias = {
+  react: path.dirname(require.resolve('react')),
+  'react-dom': path.dirname(require.resolve('react-dom')),
+  zustand: path.dirname(require.resolve('zustand')),
+}
+
 // https://taro-docs.jd.com/docs/next/config
 export default defineConfig(async () => {
   const baseConfig: UserConfigExport = {
@@ -62,6 +73,7 @@ export default defineConfig(async () => {
       enable: false,
     },
     alias: {
+      ...singletonAlias,
       '@': path.resolve(__dirname, '..', 'src'),
       '@coeditor/shared': path.resolve(__dirname, '..', '..', 'shared', 'src', 'types.ts'),
       '@plugin-registry': process.env.PLUGIN_REGISTRY_PATH
