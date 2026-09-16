@@ -540,3 +540,38 @@ html,
   overflow-y: auto;
 }
 
+// ============================================================
+// WXSS 兼容层（H5 / 桌面专用）
+//
+// 以下选择器微信小程序的 WXSS 解析器不接受，会让 app.wxss 整份编译失败
+// （开发者工具报 "error at token ':'"）：
+//   :last-child / :first-child / :nth-child / :hover / ::marker
+// 故从 app.scss 移到本文件——app.scss 保持 WXSS 可用子集，
+// 由本文件在 H5 端补齐这些细节。代价：小程序端失去
+// 「首尾元素去间距 / 表格斑马纹 / 悬停反馈」这几处装饰（不影响功能与布局）。
+// 注意：本文件 `@use './app.scss'`，规则在后 = 同权重下生效顺序不变。
+// ============================================================
+
+// 卡片内最后一个分区 / 列表项不留底部间距
+.settings-section > :last-child { margin-bottom: 0; }
+.works-card .doc-list > :last-child { margin-bottom: 0; }
+
+// 侧栏页签悬停反馈
+.tab:hover { background: var(--accent); }
+
+// Markdown：首尾元素去间距、列表标记色、表格斑马纹
+.md-content > *:first-child { margin-top: 0; }
+.md-content > *:last-child { margin-bottom: 0; }
+.md-content h1:first-child,
+.md-content h2:first-child,
+.md-content h3:first-child,
+.md-content h4:first-child,
+.md-content h5:first-child,
+.md-content h6:first-child { margin-top: 0; }
+.md-content p:first-child { margin-top: 0; }
+.md-content p:last-child { margin-bottom: 0; }
+.md-content li::marker { color: var(--muted-fg); }
+.md-content blockquote > *:first-child { margin-top: 0; }
+.md-content blockquote > *:last-child { margin-bottom: 0; }
+.md-content tr:nth-child(2n) td { background: var(--muted); }
+

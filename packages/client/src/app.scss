@@ -477,9 +477,7 @@ page {
 }
 
 // 卡片内最后一个分区不留底部间距
-.settings-section > :last-child {
-  margin-bottom: 0;
-}
+// （选择器 `> :last-child` 不被 WXSS 解析器接受，规则已移至 app.h5.scss，仅 H5 生效）
 
 // ===== 设置页小下拉（AI 接口配置的提供商/模型选择，跨端自绘） =====
 .sel {
@@ -541,9 +539,7 @@ page {
 }
 
 // 卡片内最后一个列表项不留底部间距
-.works-card .doc-list > :last-child {
-  margin-bottom: 0;
-}
+// （选择器 `> :last-child` 不被 WXSS 解析器接受，规则已移至 app.h5.scss，仅 H5 生效）
 
 // 模板下拉（自绘面板，双端一致；PC 上不再出现 wxapp 底部弹层）
 .template-picker-wrap {
@@ -731,10 +727,7 @@ page {
   border-right: 1px solid var(--border);
   color: var(--muted-fg);
   cursor: pointer;
-  // H5 悬停反馈（小程序端无 hover，忽略）
-  &:hover {
-    background: var(--accent);
-  }
+  // H5 悬停反馈（`:hover` 不被 WXSS 解析器接受，规则已移至 app.h5.scss）
   &.active {
     color: var(--fg);
     background: var(--accent);
@@ -782,14 +775,10 @@ page {
   color: var(--fg);
   word-break: break-word;
 
-  > *:first-child { margin-top: 0; }
-  > *:last-child { margin-bottom: 0; }
-
   h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
     line-height: 1.3;
     margin: 1em 0 0.5em;
-    &:first-child { margin-top: 0; }
   }
   h1 { font-size: 1.5em; }
   h2 { font-size: 1.375em; }
@@ -800,8 +789,6 @@ page {
 
   p {
     margin: 0.625em 0;
-    &:first-child { margin-top: 0; }
-    &:last-child { margin-bottom: 0; }
   }
 
   strong { font-weight: 600; }
@@ -822,7 +809,6 @@ page {
   ol { list-style: decimal; }
   li {
     margin: 0.25em 0;
-    &::marker { color: var(--muted-fg); }
   }
   li > ul, li > ol { margin: 0.25em 0; }
 
@@ -831,8 +817,6 @@ page {
     padding: 0.125em 0 0.125em 0.875em;
     border-left: 3px solid var(--border);
     color: var(--muted-fg);
-    > *:first-child { margin-top: 0; }
-    > *:last-child { margin-bottom: 0; }
   }
 
   hr {
@@ -879,7 +863,6 @@ page {
     vertical-align: top;
   }
   th { background: var(--muted); font-weight: 600; }
-  tr:nth-child(2n) td { background: var(--muted); }
 
   img {
     max-width: 100%;
