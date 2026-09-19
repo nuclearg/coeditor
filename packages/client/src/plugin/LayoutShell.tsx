@@ -22,6 +22,20 @@ import logo from '@/assets/logo.png'
 const SIDEBAR_WIDTH = 260
 
 /**
+ * 小程序端**不渲染外壳自带吊顶/吊底**的页面形态。
+ *
+ * 手机上有原生导航栏（标题+胶囊），再叠一条自绘顶栏/底栏属于冗余。首页与个人中心
+ * 都是"内容即页面"的整页形态，故一并隐藏；编辑页不在列内——它的吊顶承载面包屑
+ * （"文档 - 章节 - 段落"）。H5/桌面一律不受影响。
+ *
+ * 副作用（已知并接受）：吊顶右侧的齿轮设置入口随之消失。小程序上仍有入口——编辑页
+ * 与扩展页(custom) 保留外壳栏，齿轮在那里。若日后个人中心需要就地改语言/审阅风格，
+ * 应把这些项放进账户页自身（见 coeditor-saas 的 plugins/shared/account.tsx 的 tab 区），
+ * 而不是恢复吊顶。
+ */
+const SHELL_BARS_HIDDEN_VARIANTS: PageVariant[] = ['home', 'settings']
+
+/**
  * 页面骨架（三端一致，docs/plugin.md §3/§6）：
  *
  *   sidepanel（sidepanel.head: logo+title / 收起按钮 ｜ sidepanel.body: 章节树 ｜ sidepanel.foot）
@@ -58,10 +72,7 @@ interface LayoutShellProps {
 export function LayoutShell({ variant, sidebar, editor, ai, content, footer, children }: LayoutShellProps) {
   const isMobile = useIsMobile()
 
-  // 小程序首页不渲染外壳自带的**吊顶/吊底**：手机上有原生导航栏（标题+胶囊），
-  // 再叠一条自绘顶栏显得冗余；齿轮设置按钮也随之消失（首页不再出现设置入口）。
-  // 其它页（编辑页/设置页）保持原样。H5/桌面不受影响。
-  const hideShellBars = !isWebView() && variant === 'home'
+  const hideShellBars = !isWebView() && SHELL_BARS_HIDDEN_VARIANTS.includes(variant)
   const [resizing, setResizing] = useState(false)
   const sidebarOpen = useLayoutStore((s) => s.sidebarOpen)
   const breadcrumb = useLayoutStore((s) => s.breadcrumb)
