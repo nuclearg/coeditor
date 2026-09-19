@@ -334,8 +334,11 @@ page {
 // ===== 下拉菜单 =====
 .menu-panel {
   position: absolute;
-  right: 16px;
-  top: 108px;
+  // 锚定触发按钮（不是页面）：靠包裹层的 position:relative + top:100% + right:0。
+  // 此前写死 `right: 16px; top: 108px`，壳头高度从 60px 收到 38px 后，菜单就悬在
+  // 下面凭空多出一条缝隙（实测 16.5px）。写死偏移会随任何布局调整而失准。
+  right: 0;
+  top: 100%;
   z-index: 800;
   min-width: 340px;
   background: var(--popover);

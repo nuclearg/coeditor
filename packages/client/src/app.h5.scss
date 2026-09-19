@@ -178,8 +178,9 @@ html,
 
 // ===== 下拉菜单 =====
 .menu-panel {
-  right: 8px;
-  top: 60px;
+  // 同 app.scss：锚定触发按钮（top:100% + right:0），不用写死的页面偏移
+  right: 0;
+  top: 100%;
   min-width: 200px;
   border-radius: 6px;
   padding: 6px;

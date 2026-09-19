@@ -83,7 +83,9 @@ export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
   }
 
   return (
-    <>
+    // 定位包裹层：菜单面板用 position:absolute + top:100%/right:0 锚定齿轮
+    // （与 Sidebar 的 RowMenu 同款写法），不再依赖 .menu-panel 里写死的页面偏移
+    <View style={{ position: 'relative' }}>
       <View
         className="hover-accent"
         style={{ padding: 8, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}
@@ -99,7 +101,7 @@ export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
             style={{ position: 'fixed', inset: 0, zIndex: 790 }}
             onClick={() => setOpen(false)}
           />
-          <View className="menu-panel">
+          <View className="menu-panel" style={{ marginTop: designPx(6) }}>
             {/* 语言 */}
             <View className="menu-label">语言 / Language</View>
             {LANGUAGE_OPTIONS.map((option) => (
@@ -227,6 +229,6 @@ export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
           </View>
         </>
       )}
-    </>
+    </View>
   )
 }
