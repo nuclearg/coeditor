@@ -61,6 +61,9 @@ export default defineConfig(async () => {
         // 浏览器 favicon：构建时原样复制到 dist-h5 根目录（index.html 中按 /favicon.* 引用）
         { from: 'src/favicon.ico', to: 'dist-h5/favicon.ico' },
         { from: 'src/favicon.png', to: 'dist-h5/favicon.png' },
+        // 小程序 darkmode 变量表：必须与 app.json 同级（app.json 的 themeLocation 指向它）。
+        // Taro 不会自动复制，缺了它开启 darkmode 的小程序取不到变量，导航栏会回落成静态白底。
+        { from: 'src/theme.json', to: 'dist-weapp/theme.json' },
       ],
       options: {},
     },
