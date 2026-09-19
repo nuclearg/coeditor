@@ -484,10 +484,11 @@ export default function DocumentListPage() {
           placeholder={t('home.importTextPlaceholder')}
           maxlength={-1}
           onInput={(e) => setTextContent(e.detail.value)}
-          // Taro H5 textarea 是自定义元素包装：nativeProps 可透传（border/resize 等生效），
-          // 但 height/padding/font-size 会被 Taro 从 style 抽走——由全局 CSS
-          // .import-textarea .taro-textarea（app.h5.scss）直接命中内部元素补齐
-          className="import-textarea"
+          // 两端 className 落点不同：H5 落在 Taro 的包装元素上，样式由 app.h5.scss 的
+          // .import-textarea .taro-textarea 命中内部原生元素补齐（height/padding 会被
+          // Taro 从 style 抽走）；小程序直接落在原生 textarea 上，故用独立类
+          // （见 app.scss 的 .import-textarea-weapp，两端的类不能混用）
+          className={isWebView() ? 'import-textarea' : 'import-textarea-weapp'}
           style={{ width: '100%' }}
           nativeProps={{
             style: {

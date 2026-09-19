@@ -60,6 +60,7 @@ page {
 .flex-1 { flex: 1; min-width: 0; min-height: 0; }
 .items-center { align-items: center; }
 .items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
 .justify-between { justify-content: space-between; }
 .justify-center { justify-content: center; }
 .justify-end { justify-content: flex-end; }
@@ -221,6 +222,25 @@ page {
   line-height: 1.8;
   // 编辑区书写面贴边：去掉 textarea 圆角（与 tab 指示条、面板边角平齐）
   border-radius: 0;
+}
+
+// 导入文本域（首页"导入文本"弹窗）——**仅小程序**用的类。
+// 为什么不能共用 H5 的 .import-textarea：两端的 className 落点不同——
+// H5 落在 Taro 的包装元素上，要用后代选择器命中内部 .taro-textarea，
+// 且 height/padding/font-size 会被 Taro 从 style 抽走；小程序则直接落在原生
+// textarea 上。故小程序侧单开一个类，由 index.tsx 按 isWebView() 选择，
+// 否则把 H5 的后代规则写进共享文件会连包装元素一起套上、样式翻倍。
+// 值是 H5 原值的 2 倍：本类只作用于小程序，转 rpx 后与 H5 观感一致（240/12/14 → 480/24/28）。
+.import-textarea-weapp {
+  height: 480px;
+  padding: 24px;
+  font-size: 28px;
+  line-height: 1.6;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
 }
 
 // ===== 对话框 =====
@@ -601,6 +621,54 @@ page {
   font-weight: 600;
   color: var(--fg);
   margin-bottom: 8px;
+}
+
+// ===== 作品卡片的 ⋯ 下拉菜单 =====
+// 这些原本只在 app.h5.scss（小程序不加载该文件），但菜单两端都渲染
+// （见 pages/index/index.tsx），导致小程序上点开 ⋯ 后是一个没有样式的裸列表。
+// 规则本身都是 WXSS 支持的普通选择器，故移到共享文件；:hover 留在 H5 侧。
+// 值按 750 设计稿尺度写（小程序转 rpx），H5 的物理像素值由 app.h5.scss 覆盖——
+// 与 .btn/.create-card 等 77 个类同款约定：共享文件管小程序，H5 文件管覆盖。
+// inset 写成四条 longhand：老版本微信 WebView 对 inset 简写支持不全。
+.doc-more {
+  padding: 12px;
+  cursor: pointer;
+}
+
+// 点击外部关闭的遮罩（fixed 全屏，层级低于菜单浮层）
+.doc-menu-mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+}
+
+// 菜单浮层：相对 ⋯ 按钮容器，右对齐向下展开
+.doc-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 256px;
+  background: var(--popover);
+  color: var(--popover-fg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14);
+  padding: 8px 0;
+}
+
+.doc-menu-item {
+  padding: 18px 32px;
+  font-size: 26px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.doc-menu-item.danger {
+  color: var(--destructive);
 }
 
 .doc-card {

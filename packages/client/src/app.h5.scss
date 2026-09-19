@@ -412,28 +412,16 @@ html,
 }
 
 // 文档卡片 ⋯ 操作按钮（下拉菜单）：常显（触屏无 hover，不能靠悬停显示）；菜单浮层
+// 文档卡片的 ⋯ 菜单：结构已移到 app.scss（小程序端需要，按 750 设计稿尺度），
+// 这里按 H5 的物理像素值覆盖——与 .btn/.create-card 等 77 个类同款约定。
+// :hover 本就只有 H5 支持（WXSS 不支持），故只存在于本文件。
 .doc-more {
   padding: 6px;
-  cursor: pointer;
 }
 
-// 菜单点击外部遮罩（fixed 全屏，低于菜单浮层）
-.doc-menu-mask {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-}
-
-// 菜单浮层：相对 ⋯ 按钮容器，右对齐下方展开
 .doc-menu {
-  position: absolute;
   top: calc(100% + 2px);
-  right: 0;
-  z-index: 30;
   min-width: 128px;
-  background: var(--popover);
-  color: var(--popover-fg);
-  border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
   padding: 4px 0;
@@ -442,16 +430,10 @@ html,
 .doc-menu-item {
   padding: 9px 16px;
   font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
 }
 
 .doc-menu-item:hover {
   background: var(--muted);
-}
-
-.doc-menu-item.danger {
-  color: var(--destructive);
 }
 
 .doc-loading {
