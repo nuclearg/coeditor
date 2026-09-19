@@ -14,13 +14,16 @@ const STORAGE_KEY = 'theme'
 /**
  * 用户手动选择过的主题；没选过返回 null（= 跟随系统）。
  *
- * **小程序端恒返回 null**（即永远跟随系统）：小程序主体的配色走
- * `prefers-color-scheme` 媒体查询（见 app.scss 的 `page` 规则），它只能跟随系统，
- * 无法响应手动选择。若这里仍让手动值生效，导航栏（读本 store）会与主体
- * （读媒体查询）不一致——两害相权，统一以系统为准。
+ * 两端语义一致：手动值是**覆盖项**，选过就以它为准，没选过跟随系统。
+ *
+ * 历史（勿重蹈）：小程序端曾在此强制 `return null`（只跟随系统），因为当时以为主体
+ * 配色只能走 `page` + `prefers-color-scheme`、响应不了手动切换。但那样导航栏（读本
+ * store、会跟随手动值）与主体（读媒体查询、只跟系统）会不一致——实测点"夜间"时
+ * 只有导航栏变黑、页面还是白的。现在调色板改挂在 LayoutShell 的 `.shell-root` 上、
+ * 同一份 store 驱动（见 app.scss「调色板的挂载点」），两端行为一致，故不再需要这个
+ * 平台分支。
  */
 function manualTheme(): Theme | null {
-  if (process.env.TARO_ENV !== 'h5') return null
   const stored = getStorage(STORAGE_KEY)
   return stored === 'dark' || stored === 'light' ? stored : null
 }

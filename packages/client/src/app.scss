@@ -18,21 +18,38 @@
   flex-direction: column;
 }
 
-// ===== 小程序端夜间模式：调色板挂在 page 上 =====
+// ===== 调色板的挂载点 =====
 //
-// 为什么不能沿用上面的 `.app.dark`：实测 `.app` 这个 class **不会出现在小程序的
-// 页面内容树里**（Wxml 面板里搜不到），调色板定义在它上面等于没定义——表现就是
-// "导航栏变黑了、主体还是白的"。改用官方 DarkMode 机制：小程序样式表支持
-// `prefers-color-scheme` 媒体查询（与 Web 一致），并把调色板挂到**必然存在**的
-// `page` 元素上，不依赖任何 class 或包裹层。
+// 调色板必须挂在**每页都存在的元素**上。两条历史教训：
+// - `.app`（app.tsx 的根 View）在小程序页面树里**不存在**——小程序没有「App 组件」
+//   这一层，它的 render 结果不进任何页面的 WXML（实测普通选择器与跨组件的 `>>>`
+//   都查不到，而同层的 .home-page/.create-card 能查到）。挂它上面等于没定义。
+// - `page` 是元素选择器、必然存在，但只能配合 `prefers-color-scheme` 媒体查询，
+//   因而**只能跟随系统**，无法响应设置里的手动日间/夜间切换。
 //
-// 为什么写在共享的 app.scss 里而不是单独的小程序样式文件：Taro 的小程序构建是把
-// `src/app.scss` 按**约定**编译成 app.wxss 的（新建 app.weapp.scss 不会被采用，
-// 已验证）。而 `page` 是元素选择器——H5 的 DOM 里没有 <page> 元素，所以这两条规则
-// 在 H5/桌面上**天然惰性**，不会与那边的 `.app.dark` class 切换打架。
+// 故两处并存，各司其职：
+// 1) `.shell-root`：LayoutShell 的根元素——**所有页面最终都渲染它**（含 pages/custom
+//    1~10，它们只是 CustomPageTemplate 的一行包装），带上主题 store 的 dark class，
+//    于是主体配色跟随 store（手动选择 + 系统），与 H5/桌面行为一致。
+// 2) `page` + 媒体查询：壳外区域（页面底色等）的系统兜底。`page` 是元素选择器，H5 的
+//    DOM 里没有 <page>，所以这两条在 H5/桌面上天然惰性，不会与 app.h5.scss 的
+//    `.app.dark` 打架。
 //
-// 代价（已知并接受）：跟随的是**系统**主题；设置里的手动切换在小程序端不影响主体
-// 配色。故小程序端主题语义 = 跟随系统，store 亦同（见 stores/theme.ts 的 manualTheme）。
+// 优先级：`.shell-root(.dark)` 既更靠内、特异性也更高（类 > 元素），故总能覆盖 `page`
+// 的兜底值；未手动选择时 store 取系统值，两者一致，不会互相打架。
+.shell-root {
+  @include p.light;
+  // 背景与文字色必须由壳根自己给：小程序上没有 `.app` 那一层（见上），
+  // 否则主题变量虽已切换，内容之间的空隙与页面下半部仍会露出 page 的默认白底
+  // ——夜间模式下表现为"卡片是黑的、底子是白的"。
+  background-color: var(--bg);
+  color: var(--fg);
+}
+
+.shell-root.dark {
+  @include p.dark;
+}
+
 page {
   @include p.light;
 }
