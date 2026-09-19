@@ -50,6 +50,11 @@ interface LayoutShellProps {
 
 export function LayoutShell({ variant, sidebar, editor, ai, content, footer, children }: LayoutShellProps) {
   const isMobile = useIsMobile()
+
+  // 小程序首页不渲染外壳自带的**吊顶/吊底**：手机上有原生导航栏（标题+胶囊），
+  // 再叠一条自绘顶栏显得冗余；齿轮设置按钮也随之消失（首页不再出现设置入口）。
+  // 其它页（编辑页/设置页）保持原样。H5/桌面不受影响。
+  const hideShellBars = !isWebView() && variant === 'home'
   const [resizing, setResizing] = useState(false)
   const sidebarOpen = useLayoutStore((s) => s.sidebarOpen)
   const breadcrumb = useLayoutStore((s) => s.breadcrumb)
@@ -233,6 +238,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
           defaults={
         <View className="flex-1 flex flex-col" style={{ minWidth: 0, minHeight: 0 }} onClick={isMobile ? () => useLayoutStore.getState().setSidebarOpen(false) : undefined}>
           {/* main.head：左=面包屑(+收起态 logo) / 中 / 右（固定高度，无边框） */}
+          {!hideShellBars && (
           <SlotHost
             slot="main.head"
             defaults={
@@ -249,6 +255,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
               </View>
             }
           />
+          )}
 
           {/* main.body：编辑页 editor|ai（宽屏并排可拖拽 / 窄屏上下）；首页/自定义页 content 全宽 */}
           <SlotHost
@@ -288,7 +295,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
           />
 
           {/* ========== main.foot（插槽 + 页面级 footer；无内容时隐藏） ========== */}
-          <View className="flex items-center px-3 shrink-0" style={{ height: footer ? (isWebView() ? 34 : 52) : 0, overflow: 'hidden' }}>
+          <View className="flex items-center px-3 shrink-0" style={{ height: footer && !hideShellBars ? (isWebView() ? 34 : 52) : 0, overflow: 'hidden' }}>
             <SlotHost
               slot="main.foot"
               defaults={

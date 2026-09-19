@@ -11,8 +11,16 @@ interface ThemeStore {
 
 const STORAGE_KEY = 'theme'
 
-/** 用户手动选择过的主题；没选过返回 null（= 跟随系统）。 */
+/**
+ * 用户手动选择过的主题；没选过返回 null（= 跟随系统）。
+ *
+ * **小程序端恒返回 null**（即永远跟随系统）：小程序主体的配色走
+ * `prefers-color-scheme` 媒体查询（见 app.scss 的 `page` 规则），它只能跟随系统，
+ * 无法响应手动选择。若这里仍让手动值生效，导航栏（读本 store）会与主体
+ * （读媒体查询）不一致——两害相权，统一以系统为准。
+ */
 function manualTheme(): Theme | null {
+  if (process.env.TARO_ENV !== 'h5') return null
   const stored = getStorage(STORAGE_KEY)
   return stored === 'dark' || stored === 'light' ? stored : null
 }

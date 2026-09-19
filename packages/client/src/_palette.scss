@@ -1,0 +1,47 @@
+// ===== 主题调色板（**唯一定义处**）=====
+// 视觉基调：清淡素雅。核心三色 = 近黑深灰（文字）/ 近白浅灰（背景）/ 淡土黄（主色/强调）
+//
+// 被两处引用：
+// - app.h5.scss → `.app { @include light }` / `.app.dark { @include dark }`
+//                  （H5/桌面：class 切换，跟随 theme store 的手动/系统值）
+// - app.scss    → `page { @include light }` + `@media (prefers-color-scheme: dark)`
+//                  （小程序：跟随系统；`page` 选择器在 H5 DOM 里不存在，故天然惰性）
+// 这样调色板只有一份，改色不会漏掉某一端。
+
+@mixin light {
+  --bg: #fafafa;
+  --fg: #1f1f1f;
+  --muted: #f1f1f0;
+  --muted-fg: #6f6f6f;
+  --border: #e3e3e1;
+  --primary: #e2d1a6;
+  --primary-fg: #1a1a1a;
+  --accent: #efefee;
+  --accent-fg: #1f1f1f;
+  --destructive: #b04a38;
+  --destructive-fg: #ffffff;
+  --popover: #fafafa;
+  --popover-fg: #1f1f1f;
+  --radius: 8px;
+  --accent-warm: #e2d1a6;
+  // 原生控件（textarea/input/滚动条）跟随主题渲染，避免系统暗色样式
+  color-scheme: light;
+}
+
+@mixin dark {
+  --bg: #1a1a1a;
+  --fg: #e8e8e8;
+  --muted: #232323;
+  --muted-fg: #9a9a9a;
+  --border: #383838;
+  --primary: #e2d1a6;
+  --primary-fg: #1a1a1a;
+  --accent: #222222;
+  --accent-fg: #e8e8e8;
+  --destructive: #cf5c47;
+  --destructive-fg: #ffffff;
+  --popover: #1f1f1e;
+  --popover-fg: #e8e8e8;
+  --accent-warm: #e2d1a6;
+  color-scheme: dark;
+}
