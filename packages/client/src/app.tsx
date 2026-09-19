@@ -3,7 +3,7 @@ import { View } from '@tarojs/components'
 import Taro, { useLaunch } from '@tarojs/taro'
 import { runInit, mergePluginDictionaries, getPlugins } from '@/plugin'
 import { SlotHost } from '@/plugin/SlotHost'
-import { useTheme } from '@/stores/theme'
+import { subscribeSystemTheme, useTheme } from '@/stores/theme'
 import { cn, isH5 } from '@/lib/utils'
 import { t } from '@/lib/i18n'
 
@@ -94,6 +94,14 @@ function App({ children }: PropsWithChildren) {
 
   // 主题 class 由根 View 驱动（.app.dark），H5 与小程序一致
   const theme = useTheme((s) => s.theme)
+
+  // 跟随系统主题变化（仅当用户没在设置里手动选过主题；选过就以用户为准）
+  useEffect(() => subscribeSystemTheme(), [])
+
+  // 平台专属的主题适配不在这里：本文件只管"主题状态 → 根 View 的 .dark class"这条共用机制。
+  // 小程序的原生外壳（导航栏 / 窗口背景 / 下拉文案配色）由 SaaS 宿主的小程序插件负责
+  // ——见 coeditor-saas/plugins/weappTheme.ts（注册在 registry.weapp.ts）。
+  // 开源版只构建 H5 / 桌面，不该为一个自己不产出的端写运行时适配。
 
   // html 根同步声明 color-scheme（meta color-scheme 之外再运行时锁根元素）：
   // 系统深色时手机浏览器 Auto Dark 会无视页面自身日间设置强制压黑——根元素的
