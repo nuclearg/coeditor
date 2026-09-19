@@ -36,19 +36,28 @@ const GEAR_SVG =
 
 interface IconProps {
   name: keyof typeof ICONS | string
-  size?: number
+  /**
+   * 图标尺寸，两种写法：
+   * - **数字**（默认 28）：两端都按物理 px 渲染（内部拼 `${size}px`）。这是历史写法，
+   *   调用方若想让两端观感一致，需自己按平台给值（见 Sidebar 的 iconSize：H5 取 0.6 倍）。
+   * - **字符串**：直接作为 CSS 尺寸使用。需要「与 PC/H5 一致」时传 `designPx(n)`
+   *   （H5 `npx` / 小程序 `2nrpx`）——否则内联 px 在小程序上是物理像素，会明显偏大。
+   */
+  size?: number | string
   color?: string
 }
 
 export function Icon({ name, size = 28, color }: IconProps) {
+  // 数字 = 两端物理 px（历史语义，保持调用方不受影响）；字符串 = 直接用作 CSS 尺寸
+  const cssSize = typeof size === 'number' ? `${size}px` : size
   // H5：齿轮用标准 SVG mask 渲染（跟随 currentColor/传入色）；weapp 微信字体下 U+2699 本就是文本齿轮，保持字符
   if (name === 'gear' && isWebView()) {
     const mask = `url("data:image/svg+xml,${encodeURIComponent(GEAR_SVG)}")`
     return (
       <View
         style={{
-          width: size,
-          height: size,
+          width: cssSize,
+          height: cssSize,
           background: color || 'currentColor',
           WebkitMaskImage: mask,
           WebkitMaskRepeat: 'no-repeat',
@@ -63,7 +72,7 @@ export function Icon({ name, size = 28, color }: IconProps) {
     )
   }
   return (
-    <Text className="icon" style={{ fontSize: `${size}px`, lineHeight: 1, color: color || 'inherit' }}>
+    <Text className="icon" style={{ fontSize: cssSize, lineHeight: 1, color: color || 'inherit' }}>
       {ICONS[name] || name}
     </Text>
   )

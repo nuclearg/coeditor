@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { DraftTabs, type DraftItem } from '@/components/document/DraftTabs'
 import { SlotHost } from '@/plugin/SlotHost'
 import { useReviewStore } from '@/stores/reviewStore'
-import { isWebView } from '@/lib/utils'
+import { designPx, isWebView } from '@/lib/utils'
 import { useIsMobile } from '@/hooks'
 import { useT } from '@/lib/i18n'
 
@@ -73,7 +73,7 @@ export function EditorPanel({
       <SlotHost
         slot="editorpanel.head"
         defaults={
-          <View className="flex items-end gap-2 shrink-0" style={{ height: isWebView() ? 30 : 50 }}>
+          <View className="flex items-end gap-2 shrink-0" style={{ height: designPx(30) }}>
             <SlotHost slot="editorpanel.head.left" />
             <View style={{ flex: 1, minWidth: 0, display: 'flex' }}>
               <SlotHost slot="editorpanel.head.middle" defaults={headbarMiddleDefaults} />
@@ -127,7 +127,7 @@ export function EditorPanel({
         <SlotHost
           slot="editorpanel.foot"
           defaults={
-            <View className="flex items-center gap-2 shrink-0" style={{ height: isWebView() ? 38 : 60 }}>
+            <View className="flex items-center gap-2 shrink-0" style={{ height: designPx(38) }}>
               <View className="flex-1">
                 {/* foot.left 扩展点（插件可装饰；导出入口已移至首页文档卡片菜单） */}
                 <SlotHost slot="editorpanel.foot.left" />
@@ -139,7 +139,7 @@ export function EditorPanel({
                 defaults={
                   <>
                     {isEditable && (
-                      <Button onClick={() => doSave()} disabled={!dirty || saving} variant="outline" style={{ height: isWebView() ? 38 : 60, padding: isWebView() ? '0 24px' : undefined }}>
+                      <Button onClick={() => doSave()} disabled={!dirty || saving} variant="outline" style={{ height: designPx(38), padding: isWebView() ? '0 24px' : undefined }}>
                         {t('common.save')}
                       </Button>
                     )}
@@ -147,7 +147,7 @@ export function EditorPanel({
                       slot="review-button"
                       defaults={
                         // 保存并审阅：审阅链路本身会先保存再发起（edit 页 autoSubmit 前置 doSave）
-                        <Button onClick={() => useReviewStore.getState().startReview()} variant="primary" style={{ height: isWebView() ? 38 : 60, padding: isWebView() ? '0 24px' : undefined }}>
+                        <Button onClick={() => useReviewStore.getState().startReview()} variant="primary" style={{ height: designPx(38), padding: isWebView() ? '0 24px' : undefined }}>
                           {t('editor.reviewAndSave')}
                         </Button>
                       }

@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { useI18nStore } from '@/stores/i18nStore'
 import { useTheme } from '@/stores/theme'
 import { t } from '@/lib/i18n'
-import { cn, isWebView } from '@/lib/utils'
+import { cn, designPx } from '@/lib/utils'
 
 const STYLE_OPTIONS = [
   { value: 'gentle', label: () => t('settings.gentle') },
@@ -95,8 +95,8 @@ export function renderSettingsButton(opts?: { icon?: string; label?: string }) {
       style={{ padding: 8, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}
       onClick={() => { /* 跳转由调用方注入；此处仅渲染样式 */ }}
     >
-      <Icon name={opts?.icon ?? 'gear'} size={isWebView() ? 24 : 36} />
-      {opts?.label && <Text style={{ fontSize: isWebView() ? 24 : 34 }}>{opts.label}</Text>}
+      <Icon name={opts?.icon ?? 'gear'} size={designPx(24)} />
+      {opts?.label && <Text style={{ fontSize: designPx(24) }}>{opts.label}</Text>}
     </View>
   )
 }

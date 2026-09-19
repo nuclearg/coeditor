@@ -249,7 +249,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
           <SlotHost
             slot="main.head"
             defaults={
-              <View className="shell-head flex items-center gap-2 shrink-0" style={{ height: isWebView() ? 38 : 60, background: 'var(--muted)' }}>
+              <View className="shell-head flex items-center gap-2 shrink-0" style={{ height: designPx(38), background: 'var(--muted)' }}>
                 <View className="flex-1 flex items-center" style={{ minWidth: 0 }}>
                   <SlotHost slot="main.head.left" defaults={renderMainHeadLeft()} />
                 </View>
