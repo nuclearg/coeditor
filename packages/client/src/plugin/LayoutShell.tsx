@@ -7,12 +7,19 @@ import { SettingsMenu } from '@/components/settings/SettingsMenu'
 import { SlotHost } from '@/plugin/SlotHost'
 import { useLayoutStore, type PageVariant } from '@/stores/layoutStore'
 import { useIsMobile } from '@/hooks'
-import { isWebView } from '@/lib/utils'
+import { isWebView, designPx } from '@/lib/utils'
 import { getStorage, setStorage } from '@/lib/storage'
 import logo from '@/assets/logo.png'
 
-/** sidebar 宽度（PC 宽屏展开时）；与 Sidebar 组件内部 width 保持一致 */
-const SIDEBAR_WIDTH = isWebView() ? 260 : 420
+/**
+ * sidebar 宽度（设计 px）；与 Sidebar 组件内部 width 保持一致。
+ *
+ * 用内联样式时必须过 {@link designPx}：内联 style 不过 pxtransform，小程序会把它当
+ * **物理像素**。此前这里写的是 `isWebView() ? 260 : 420`，小程序端就成了 420px——比
+ * 手机视口（390）还宽，于是整屏被侧栏盖满：遮罩（层级更低）点不到、收起按钮被挤出
+ * 屏幕，展开后再也收不回去。designPx 让小程序输出 520rpx（≈视口 2/3），与 H5 等宽。
+ */
+const SIDEBAR_WIDTH = 260
 
 /**
  * 页面骨架（三端一致，docs/plugin.md §3/§6）：
@@ -226,7 +233,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
               style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }}
               onClick={() => useLayoutStore.getState().setSidebarOpen(false)}
             />
-            <View style={{ position: 'relative', zIndex: 1, height: '100%', width: SIDEBAR_WIDTH }} data-sidebar-region="true">
+            <View style={{ position: 'relative', zIndex: 1, height: '100%', width: designPx(SIDEBAR_WIDTH) }} data-sidebar-region="true">
               <SlotHost slot="sidepanel" defaults={sidebar} />
             </View>
           </View>
