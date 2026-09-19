@@ -7,7 +7,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { useChapterStore, useParagraphStore, useParagraphDraftStore, useDocumentStore, useAttachmentStore } from '@/stores'
 import { SlotHost } from '@/plugin/SlotHost'
 import { useLayoutStore } from '@/stores/layoutStore'
-import { charCount, cn, getCurrentDraft, isWebView } from '@/lib/utils'
+import { charCount, cn, designPx, getCurrentDraft, isWebView } from '@/lib/utils'
 import { useT, localize } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/toast'
 import logo from '@/assets/logo.png'
@@ -377,7 +377,7 @@ export const Sidebar = memo(function Sidebar({
             <Icon name="file" size={iconSize(28)} color="var(--muted-fg)" />
             <View className="flex-1 truncate">{attachmentDisplayName(def, att)}</View>
             {cur && (
-              <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isWebView() ? 12 : 20 }}>{t('sidebar.wordCount', { n: charCount(cur.content) })}</View>
+              <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: designPx(12) }}>{t('sidebar.wordCount', { n: charCount(cur.content) })}</View>
             )}
           </View>
         )
@@ -394,7 +394,7 @@ export const Sidebar = memo(function Sidebar({
       <Icon name="book" size={iconSize(28)} color="var(--muted-fg)" />
       <View className="flex-1 truncate">{t('sidebar.fulltext')}</View>
       {allParasLoaded && (
-        <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isWebView() ? 12 : 20 }}>{t('sidebar.fulltextCount', { n: fullTextCount })}</View>
+        <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: designPx(12) }}>{t('sidebar.fulltextCount', { n: fullTextCount })}</View>
       )}
     </View>
   )
@@ -495,7 +495,7 @@ export const Sidebar = memo(function Sidebar({
                     {!isChapRenaming && (
                       <>
                         {allDraftsLoaded && (
-                          <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isWebView() ? 12 : 20 }}>{t("sidebar.wordCount", { n: chapterCount })}</View>
+                          <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: designPx(12) }}>{t("sidebar.wordCount", { n: chapterCount })}</View>
                         )}
                         <View
                           className="shrink-0 hover-accent rounded"
@@ -550,7 +550,7 @@ export const Sidebar = memo(function Sidebar({
                             {!isRenaming && (
                               <>
                                 {paraDrafts.length > 0 && (
-                                  <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isWebView() ? 12 : 20 }}>{t("sidebar.wordCount", { n: charCountNum })}</View>
+                                  <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: designPx(12) }}>{t("sidebar.wordCount", { n: charCountNum })}</View>
                                 )}
                                 <View
                                   className="shrink-0 hover-accent rounded"
