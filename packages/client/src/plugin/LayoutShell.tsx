@@ -178,15 +178,15 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
       ) : (
         <View
           className="flex items-center gap-2 font-semibold shrink-0"
-          style={{ fontSize: isWebView() ? 20 : 34, overflow: 'hidden', paddingLeft: isWebView() ? 12 : 16 }}
+          style={{ fontSize: designPx(20), overflow: 'hidden', paddingLeft: designPx(12) }}
         >
           <Image
             src={logo}
             mode="aspectFit"
             onClick={canGoHome ? goHome : undefined}
             style={{
-              width: isWebView() ? 24 : 36,
-              height: isWebView() ? 24 : 36,
+              width: designPx(24),
+              height: designPx(24),
               cursor: canGoHome ? 'pointer' : undefined,
             }}
           />

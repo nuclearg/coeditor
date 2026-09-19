@@ -412,10 +412,10 @@ export const Sidebar = memo(function Sidebar({
                 defaults={
                   <View
                     className="flex items-center gap-2 font-semibold shrink-0"
-                    style={{ fontSize: isWebView() ? 20 : 34, overflow: 'hidden', paddingLeft: isWebView() ? 12 : 16 }}
+                    style={{ fontSize: designPx(20), overflow: 'hidden', paddingLeft: designPx(12) }}
                     onClick={onNavigateHome}
                   >
-                    <Image src={logo} mode="aspectFit" style={{ width: isWebView() ? 24 : 36, height: isWebView() ? 24 : 36 }} />
+                    <Image src={logo} mode="aspectFit" style={{ width: designPx(24), height: designPx(24) }} />
                     <View style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('brand.name')}</View>
                   </View>
                 }
@@ -426,7 +426,7 @@ export const Sidebar = memo(function Sidebar({
             <SlotHost
               slot="sidepanel.head.right"
               defaults={
-                <View className="hover-accent" style={{ padding: 8, borderRadius: 8, marginRight: isWebView() ? 8 : 12 }} onClick={closeSidebar}>
+                <View className="hover-accent" style={{ padding: 8, borderRadius: 8, marginRight: designPx(8) }} onClick={closeSidebar}>
                   <Icon name="chevronLeft" size={28} color="var(--muted-fg)" />
                 </View>
               }
