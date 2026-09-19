@@ -6,8 +6,9 @@ import { Icon } from '@/components/ui/Icon'
 import { SettingsMenu } from '@/components/settings/SettingsMenu'
 import { SlotHost } from '@/plugin/SlotHost'
 import { useLayoutStore, type PageVariant } from '@/stores/layoutStore'
+import { useTheme } from '@/stores/theme'
 import { useIsMobile } from '@/hooks'
-import { isWebView, designPx } from '@/lib/utils'
+import { cn, isWebView, designPx } from '@/lib/utils'
 import { getStorage, setStorage } from '@/lib/storage'
 import logo from '@/assets/logo.png'
 
@@ -73,6 +74,9 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
   const isMobile = useIsMobile()
 
   const hideShellBars = !isWebView() && SHELL_BARS_HIDDEN_VARIANTS.includes(variant)
+  // 调色板挂在下面这个根元素上（见 app.scss「调色板的挂载点」）：小程序没有 App 组件层，
+  // app.tsx 的 .app 不进页面树，只有 LayoutShell 的根元素是每页都存在的挂载点。
+  const theme = useTheme((s) => s.theme)
   const [resizing, setResizing] = useState(false)
   const sidebarOpen = useLayoutStore((s) => s.sidebarOpen)
   const breadcrumb = useLayoutStore((s) => s.breadcrumb)
@@ -210,7 +214,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
   )
 
   return (
-    <View className="flex flex-col" data-variant={variant} style={{ height: '100vh' }}>
+    <View className={cn('shell-root flex flex-col', theme === 'dark' && 'dark')} data-variant={variant} style={{ height: '100vh' }}>
       <View className="flex flex-1" style={{ minHeight: 0, flexDirection: isMobile ? 'column' : 'row' }}>
         {/* ========== sidepanel 区块（宽屏内联带宽度动画 / 窄屏浮层；无 sidepanel 时不渲染） ========== */}
         {!isMobile && isEditor && (
