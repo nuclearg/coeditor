@@ -7,7 +7,7 @@ import { Icon } from '@/components/ui/Icon'
 import { useT } from '@/lib/i18n'
 import { api, buildHeaders } from '@/api/client'
 import type { AppSettings } from '@coeditor/shared'
-import { cn, isH5 } from '@/lib/utils'
+import { cn, isWebView } from '@/lib/utils'
 
 /**
  * AI 接口配置区块（设置页内，BYOK）。
@@ -132,7 +132,7 @@ function SelectBox({ value, options, placeholder, disabled, onSelect }: SelectBo
         <View className="flex-1" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {current?.label ?? placeholder ?? ''}
         </View>
-        <Icon name="chevronDown" size={isH5() ? 16 : 22} color="var(--muted-fg)" />
+        <Icon name="chevronDown" size={isWebView() ? 16 : 22} color="var(--muted-fg)" />
       </View>
 
       {open && (
@@ -156,7 +156,7 @@ function SelectBox({ value, options, placeholder, disabled, onSelect }: SelectBo
                   <View className="flex-1" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {o.label}
                   </View>
-                  {o.value === value && <Icon name="✓" size={isH5() ? 14 : 20} color="var(--accent-warm)" />}
+                  {o.value === value && <Icon name="✓" size={isWebView() ? 14 : 20} color="var(--accent-warm)" />}
                 </View>
               ))}
             </ScrollView>

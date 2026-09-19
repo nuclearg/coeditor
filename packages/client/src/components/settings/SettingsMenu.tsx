@@ -10,7 +10,7 @@ import { useI18nStore } from '@/stores/i18nStore'
 import { useTheme } from '@/stores/theme'
 import { t } from '@/lib/i18n'
 import { getSettingsLauncher } from '@/plugin/launcher'
-import { cn, isH5 } from '@/lib/utils'
+import { cn, isWebView } from '@/lib/utils'
 
 const STYLE_OPTIONS = [
   { value: 'gentle', label: () => t('settings.gentle') },
@@ -89,7 +89,7 @@ export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
         style={{ padding: 8, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}
         onClick={handleGearClick}
       >
-        <Icon name="gear" size={isH5() ? 24 : 36} />
+        <Icon name="gear" size={isWebView() ? 24 : 36} />
       </View>
 
       {open && (
@@ -222,7 +222,7 @@ export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
             <View className="menu-sep" />
             <View className="menu-item" onClick={goSettings}>
               <View className="flex-1">{getSettingsPageLabel()}</View>
-              <Icon name="chevronRight" size={isH5() ? 20 : 28} color="var(--muted-fg)" />
+              <Icon name="chevronRight" size={isWebView() ? 20 : 28} color="var(--muted-fg)" />
             </View>
           </View>
         </>

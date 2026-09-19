@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState, useEffect, useId, type ReactNode } from 'react'
 import { View } from '@tarojs/components'
-import { cn, isH5 } from '@/lib/utils'
+import { cn, isWebView } from '@/lib/utils'
 import { getStorage, setStorage } from '@/lib/storage'
 
 interface ResizablePanelProps {
@@ -66,7 +66,7 @@ export function ResizablePanel({
 
   // H5 桌面端：原生 DOM 上绑定 mousedown（Taro View 类型不含 onMouseDown）
   useEffect(() => {
-    if (!isH5() || typeof document === 'undefined') return
+    if (!isWebView() || typeof document === 'undefined') return
     const el = document.getElementById(handleId)
     if (!el) return
     el.addEventListener('mousedown', onMouseDown)

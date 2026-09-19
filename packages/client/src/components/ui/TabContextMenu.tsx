@@ -2,7 +2,7 @@ import { View } from '@tarojs/components'
 import { useEffect, useRef } from 'react'
 import { Dialog } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
-import { cn, isH5 } from '@/lib/utils'
+import { cn, isWebView } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 
 /**
@@ -44,7 +44,7 @@ export function TabContextMenu({ state, total, noun, onChange, onCloseRight, onC
 
   // 点击空白处关闭菜单（仅左键；右键会由 tab 的 contextmenu 重新打开新菜单）
   useEffect(() => {
-    if (!open || !isH5()) return
+    if (!open || !isWebView()) return
     const onDocClick = (e: MouseEvent) => {
       if (e.button !== 0) return
       if (menuRef.current && menuRef.current.contains(e.target as Node)) return
@@ -56,7 +56,7 @@ export function TabContextMenu({ state, total, noun, onChange, onCloseRight, onC
 
   // 菜单贴边钳制：不超出视口
   useEffect(() => {
-    if (!state || state.stage !== 'menu' || !isH5()) return
+    if (!state || state.stage !== 'menu' || !isWebView()) return
     const el = menuRef.current
     if (!el) return
     const w = el.offsetWidth

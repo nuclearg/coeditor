@@ -7,12 +7,12 @@ import { SettingsMenu } from '@/components/settings/SettingsMenu'
 import { SlotHost } from '@/plugin/SlotHost'
 import { useLayoutStore, type PageVariant } from '@/stores/layoutStore'
 import { useIsMobile } from '@/hooks'
-import { isH5 } from '@/lib/utils'
+import { isWebView } from '@/lib/utils'
 import { getStorage, setStorage } from '@/lib/storage'
 import logo from '@/assets/logo.png'
 
 /** sidebar 宽度（PC 宽屏展开时）；与 Sidebar 组件内部 width 保持一致 */
-const SIDEBAR_WIDTH = isH5() ? 260 : 420
+const SIDEBAR_WIDTH = isWebView() ? 260 : 420
 
 /**
  * 页面骨架（三端一致，docs/plugin.md §3/§6）：
@@ -70,22 +70,22 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
 
   // sidebar 宽度：仅 H5 宽屏可拖拽调整（持久化）；其余场景用固定宽度
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    if (!isH5()) return SIDEBAR_WIDTH
+    if (!isWebView()) return SIDEBAR_WIDTH
     const v = parseFloat(getStorage('coeditor-sidebar-width') || '')
     return Number.isFinite(v) ? Math.min(480, Math.max(160, v)) : SIDEBAR_WIDTH
   })
   const sidebarWidthRef = useRef(sidebarWidth)
   sidebarWidthRef.current = sidebarWidth
-  const sidebarWidthFinal = isH5() ? sidebarWidth : SIDEBAR_WIDTH
+  const sidebarWidthFinal = isWebView() ? sidebarWidth : SIDEBAR_WIDTH
 
   useEffect(() => {
-    if (isH5()) setStorage('coeditor-sidebar-width', sidebarWidth)
+    if (isWebView()) setStorage('coeditor-sidebar-width', sidebarWidth)
   }, [sidebarWidth])
 
   // H5 宽屏：sidebar | editor 之间的拖拽分隔条
   // Taro View 的 ref/事件在自定义元素上不可靠，改用 document 委托 mousedown（与点击外部收起同模式）
   useEffect(() => {
-    if (!isH5() || isMobile) return
+    if (!isWebView() || isMobile) return
     const onDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null
       if (!target?.closest?.('[data-sidebar-resizer]')) return
@@ -111,7 +111,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
   // H5 端：Taro View 的 onClick 在自定义元素上绑定不可靠（合成 click 不触发），
   // 这里在 document 上委托实现"点击 sidebar 外部区域收起"（仅竖屏生效，PC 横屏不收起）
   useEffect(() => {
-    if (!isH5() || !isEditor || !isMobile) return
+    if (!isWebView() || !isEditor || !isMobile) return
     const handler = (e: Event) => {
       // 不能用 e.target.closest 判断点击是否在 sidebar 内部：点击“新建章节/段落”
       // 这类交互时，React 会同步 flush 把被点的行替换成输入框，事件冒泡到
@@ -148,7 +148,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
               onClick={(e) => { e.stopPropagation(); useLayoutStore.getState().setSidebarOpen(true) }}
             >
               {/* 收起态左侧：菜单图标（语义为“展开侧栏”，点击展开） */}
-              <Icon name="menu" size={isH5() ? 18 : 30} color="var(--muted-fg)" />
+              <Icon name="menu" size={isWebView() ? 18 : 30} color="var(--muted-fg)" />
             </View>
           )}
           {breadcrumb && (
@@ -166,15 +166,15 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
       ) : (
         <View
           className="flex items-center gap-2 font-semibold shrink-0"
-          style={{ fontSize: isH5() ? 20 : 34, overflow: 'hidden', paddingLeft: isH5() ? 12 : 16 }}
+          style={{ fontSize: isWebView() ? 20 : 34, overflow: 'hidden', paddingLeft: isWebView() ? 12 : 16 }}
         >
           <Image
             src={logo}
             mode="aspectFit"
             onClick={canGoHome ? goHome : undefined}
             style={{
-              width: isH5() ? 24 : 36,
-              height: isH5() ? 24 : 36,
+              width: isWebView() ? 24 : 36,
+              height: isWebView() ? 24 : 36,
               cursor: canGoHome ? 'pointer' : undefined,
             }}
           />
@@ -236,7 +236,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
           <SlotHost
             slot="main.head"
             defaults={
-              <View className="shell-head flex items-center gap-2 shrink-0" style={{ height: isH5() ? 38 : 60, background: 'var(--muted)' }}>
+              <View className="shell-head flex items-center gap-2 shrink-0" style={{ height: isWebView() ? 38 : 60, background: 'var(--muted)' }}>
                 <View className="flex-1 flex items-center" style={{ minWidth: 0 }}>
                   <SlotHost slot="main.head.left" defaults={renderMainHeadLeft()} />
                 </View>
@@ -288,7 +288,7 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
           />
 
           {/* ========== main.foot（插槽 + 页面级 footer；无内容时隐藏） ========== */}
-          <View className="flex items-center px-3 shrink-0" style={{ height: footer ? (isH5() ? 34 : 52) : 0, overflow: 'hidden' }}>
+          <View className="flex items-center px-3 shrink-0" style={{ height: footer ? (isWebView() ? 34 : 52) : 0, overflow: 'hidden' }}>
             <SlotHost
               slot="main.foot"
               defaults={

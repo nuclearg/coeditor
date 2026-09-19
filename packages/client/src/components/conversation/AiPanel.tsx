@@ -12,7 +12,7 @@ import { bus } from '@/plugin/bus'
 import { api } from '@/api/client'
 import { streamAiResponse } from '@/api/stream'
 
-import { cn, formatDateTime, isH5 } from '@/lib/utils'
+import { cn, formatDateTime, isWebView } from '@/lib/utils'
 import { useIsMobile } from '@/hooks'
 import { useT } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/toast'
@@ -149,7 +149,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   // tab 右键菜单（H5）：右键命中会话 tab 行 → 打开菜单（位置=光标，index=展示顺序）。
   // 作用域限定在 conv-tab-bar 内，避免与草稿版本 tab 的右键菜单互相干扰。
   useEffect(() => {
-    if (!isH5()) return
+    if (!isWebView()) return
     const onContextMenu = (e: MouseEvent) => {
       const row = (e.target as HTMLElement).closest?.('.conv-tab-bar .tab-row') as HTMLElement | null
       if (!row) return
@@ -185,7 +185,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     return null
   }, [])
   useEffect(() => {
-    if (!isH5()) return
+    if (!isWebView()) return
     let container: HTMLElement | null = null
     let userScrolling = false
     let disposed = false
@@ -249,11 +249,11 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     // 顶起 ~12px，超出 10px 吸底判定，导致跟随时"永远差一点"）。
     // 容器可能尚未被监听 effect 找到（首帧/懒加载），这里兜底查找。
     let container = scrollContainerRef.current
-    if (!container && isH5()) {
+    if (!container && isWebView()) {
       container = findScrollContainer()
       if (container) scrollContainerRef.current = container
     }
-    if (isH5() && container && stickToBottomRef.current) {
+    if (isWebView() && container && stickToBottomRef.current) {
       container.scrollTop = container.scrollHeight
     }
   }, [activeTurns, streamContent, thinkingContent, streaming, findScrollContainer])
@@ -359,12 +359,12 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
             // React 18 自动批处理会把流式循环中连续到来的 setState 合并成一次渲染，
             // 导致打字机效果丢失。H5 端把 setState 包进 flushSync 强制同步刷新。
             const update = () => setStream(convId!, { thinking: text })
-            if (isH5()) flushSync(update)
+            if (isWebView()) flushSync(update)
             else update()
           },
           onContent: (text) => {
             const update = () => setStream(convId!, { content: text })
-            if (isH5()) flushSync(update)
+            if (isWebView()) flushSync(update)
             else update()
           },
           onError: setError,
@@ -554,11 +554,11 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     return (
       <View className="flex-1">
         <Textarea
-          autoHeight={isH5()}
-          className={cn('text-sm resize-none', isH5() && 'ai-panel-input')}
+          autoHeight={isWebView()}
+          className={cn('text-sm resize-none', isWebView() && 'ai-panel-input')}
           // H5：不锁固定高度（会挡住内部自动长高），用 minHeight + maxHeight——
           // 内部 textarea 靠 field-sizing/autoHeight 随输入自然长高，达 ~5 行（max-height 120px）后内部滚动
-          style={isH5()
+          style={isWebView()
             ? { minHeight: 38, maxHeight: 120, padding: '6px 10px', boxSizing: 'border-box' }
             : { height: 60, minHeight: 60 }}
           placeholder={placeholder}
@@ -576,10 +576,10 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     <Button
       size="icon"
       className="shrink-0"
-      style={{ width: isH5() ? 38 : 60, height: isH5() ? 38 : 60 }}
+      style={{ width: isWebView() ? 38 : 60, height: isWebView() ? 38 : 60 }}
       onClick={streaming ? handleAbort : handleSend}
     >
-      <Icon name={streaming ? 'stop' : 'send'} size={isH5() ? 18 : 28} />
+      <Icon name={streaming ? 'stop' : 'send'} size={isWebView() ? 18 : 28} />
     </Button>
   )
 
@@ -618,7 +618,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       <SlotHost
         slot="aipanel.head"
         defaults={
-          <View className="flex items-end gap-2 shrink-0" style={{ height: isH5() ? 30 : 50 }}>
+          <View className="flex items-end gap-2 shrink-0" style={{ height: isWebView() ? 30 : 50 }}>
             <SlotHost slot="aipanel.head.left" />
             {/* middle 必须 flex-1 + minWidth:0：会话 tab 多时由内部 ScrollView scrollX 横向滚动，
                 而不是把 flex 布局撑破产生页面级横向滚动条（H5/wxapp 均适用） */}
@@ -689,7 +689,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       <SlotHost
         slot="aipanel.foot"
         defaults={
-          <View className="flex items-center gap-2 shrink-0" style={{ height: isH5() ? 38 : 60 }}>
+          <View className="flex items-center gap-2 shrink-0" style={{ height: isWebView() ? 38 : 60 }}>
             <SlotHost slot="aipanel.foot.left" />
             <View className="flex-1">
               <SlotHost slot="aipanel.foot.middle" defaults={renderInput()} />

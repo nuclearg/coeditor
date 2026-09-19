@@ -1,6 +1,6 @@
 import { Textarea as TaroTextarea } from '@tarojs/components'
 import { useEffect, useId } from 'react'
-import { cn, isH5 } from '@/lib/utils'
+import { cn, isWebView } from '@/lib/utils'
 
 interface TextareaProps {
   value?: string
@@ -34,7 +34,7 @@ export function Textarea({
 
   // H5：原生 textarea 上监听 Enter（小程序端用 onConfirm）
   useEffect(() => {
-    if (!isH5() || typeof document === 'undefined') return
+    if (!isWebView() || typeof document === 'undefined') return
     const el = document.getElementById(id)
     if (!el) return
     const onKeyDown = (e: KeyboardEvent) => {
@@ -63,7 +63,7 @@ export function Textarea({
       maxlength={maxLength}
       style={style}
       onInput={(e) => onChange?.(e.detail.value)}
-      onConfirm={isH5() ? undefined : () => onEnter?.(false)}
+      onConfirm={isWebView() ? undefined : () => onEnter?.(false)}
       confirmType={onEnter ? 'send' : 'return'}
     />
   )

@@ -7,7 +7,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { useChapterStore, useParagraphStore, useParagraphDraftStore, useDocumentStore, useAttachmentStore } from '@/stores'
 import { SlotHost } from '@/plugin/SlotHost'
 import { useLayoutStore } from '@/stores/layoutStore'
-import { charCount, cn, getCurrentDraft, isH5 } from '@/lib/utils'
+import { charCount, cn, getCurrentDraft, isWebView } from '@/lib/utils'
 import { useT, localize } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/toast'
 import logo from '@/assets/logo.png'
@@ -51,7 +51,7 @@ function attachmentDisplayName(def: AttachmentDef, att: Attachment | undefined):
 }
 
 /** H5 端图标缩小（web 尺寸），小程序保持移动尺寸 */
-const iconSize = (size: number) => (isH5() ? Math.max(14, Math.round(size * 0.6)) : size)
+const iconSize = (size: number) => (isWebView() ? Math.max(14, Math.round(size * 0.6)) : size)
 
 export const Sidebar = memo(function Sidebar({
   docId,
@@ -340,7 +340,7 @@ export const Sidebar = memo(function Sidebar({
         <View className="relative">
           <View
             className="hover-accent"
-            style={{ padding: isH5() ? 3 : 6, display: 'flex' }}
+            style={{ padding: isWebView() ? 3 : 6, display: 'flex' }}
             onClick={(e) => {
               e.stopPropagation()
               setTitleMenuOpen((v) => !v)
@@ -377,7 +377,7 @@ export const Sidebar = memo(function Sidebar({
             <Icon name="file" size={iconSize(28)} color="var(--muted-fg)" />
             <View className="flex-1 truncate">{attachmentDisplayName(def, att)}</View>
             {cur && (
-              <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isH5() ? 12 : 20 }}>{t('sidebar.wordCount', { n: charCount(cur.content) })}</View>
+              <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isWebView() ? 12 : 20 }}>{t('sidebar.wordCount', { n: charCount(cur.content) })}</View>
             )}
           </View>
         )
@@ -394,7 +394,7 @@ export const Sidebar = memo(function Sidebar({
       <Icon name="book" size={iconSize(28)} color="var(--muted-fg)" />
       <View className="flex-1 truncate">{t('sidebar.fulltext')}</View>
       {allParasLoaded && (
-        <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isH5() ? 12 : 20 }}>{t('sidebar.fulltextCount', { n: fullTextCount })}</View>
+        <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isWebView() ? 12 : 20 }}>{t('sidebar.fulltextCount', { n: fullTextCount })}</View>
       )}
     </View>
   )
@@ -405,17 +405,17 @@ export const Sidebar = memo(function Sidebar({
       <SlotHost
         slot="sidepanel.head"
         defaults={
-          <View className="flex items-center gap-2 shrink-0" style={{ height: isH5() ? 38 : 60 }}>
+          <View className="flex items-center gap-2 shrink-0" style={{ height: isWebView() ? 38 : 60 }}>
             <View className="flex-1 flex items-center" style={{ minWidth: 0 }}>
               <SlotHost
                 slot="sidepanel.head.left"
                 defaults={
                   <View
                     className="flex items-center gap-2 font-semibold shrink-0"
-                    style={{ fontSize: isH5() ? 20 : 34, overflow: 'hidden', paddingLeft: isH5() ? 12 : 16 }}
+                    style={{ fontSize: isWebView() ? 20 : 34, overflow: 'hidden', paddingLeft: isWebView() ? 12 : 16 }}
                     onClick={onNavigateHome}
                   >
-                    <Image src={logo} mode="aspectFit" style={{ width: isH5() ? 24 : 36, height: isH5() ? 24 : 36 }} />
+                    <Image src={logo} mode="aspectFit" style={{ width: isWebView() ? 24 : 36, height: isWebView() ? 24 : 36 }} />
                     <View style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('brand.name')}</View>
                   </View>
                 }
@@ -426,7 +426,7 @@ export const Sidebar = memo(function Sidebar({
             <SlotHost
               slot="sidepanel.head.right"
               defaults={
-                <View className="hover-accent" style={{ padding: 8, borderRadius: 8, marginRight: isH5() ? 8 : 12 }} onClick={closeSidebar}>
+                <View className="hover-accent" style={{ padding: 8, borderRadius: 8, marginRight: isWebView() ? 8 : 12 }} onClick={closeSidebar}>
                   <Icon name="chevronLeft" size={28} color="var(--muted-fg)" />
                 </View>
               }
@@ -495,11 +495,11 @@ export const Sidebar = memo(function Sidebar({
                     {!isChapRenaming && (
                       <>
                         {allDraftsLoaded && (
-                          <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isH5() ? 12 : 20 }}>{t("sidebar.wordCount", { n: chapterCount })}</View>
+                          <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isWebView() ? 12 : 20 }}>{t("sidebar.wordCount", { n: chapterCount })}</View>
                         )}
                         <View
                           className="shrink-0 hover-accent rounded"
-                          style={{ padding: isH5() ? 3 : 6 }}
+                          style={{ padding: isWebView() ? 3 : 6 }}
                           onClick={() => setMenuFor(
                             menuFor?.kind === 'chapter' && menuFor.id === chapter.id ? null : { kind: 'chapter', id: chapter.id },
                           )}
@@ -550,11 +550,11 @@ export const Sidebar = memo(function Sidebar({
                             {!isRenaming && (
                               <>
                                 {paraDrafts.length > 0 && (
-                                  <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isH5() ? 12 : 20 }}>{t("sidebar.wordCount", { n: charCountNum })}</View>
+                                  <View className="shrink-0 text-muted tabular-nums" style={{ fontSize: isWebView() ? 12 : 20 }}>{t("sidebar.wordCount", { n: charCountNum })}</View>
                                 )}
                                 <View
                                   className="shrink-0 hover-accent rounded"
-                                  style={{ padding: isH5() ? 3 : 6 }}
+                                  style={{ padding: isWebView() ? 3 : 6 }}
                                   onClick={() => setMenuFor(
                                     menuFor?.kind === 'paragraph' && menuFor.id === para.id ? null : { kind: 'paragraph', chapterId: chapter.id, id: para.id },
                                   )}
@@ -660,7 +660,7 @@ export const Sidebar = memo(function Sidebar({
       <SlotHost
         slot="sidepanel.foot"
         defaults={
-          <View className="flex items-center shrink-0" style={{ height: isH5() ? 38 : 60 }}>
+          <View className="flex items-center shrink-0" style={{ height: isWebView() ? 38 : 60 }}>
             <View className="flex-1">
               <SlotHost slot="sidepanel.foot.left" />
             </View>

@@ -7,7 +7,18 @@ export function charCount(text: string): number {
   return text.replace(/\s/g, '').length
 }
 
-export function isH5(): boolean {
+/**
+ * 是否运行在**非小程序的 WebView 构建**里。
+ *
+ * 它不是"H5 浏览器"的意思：Taro 只有 h5 / weapp 两个构建目标，而桌面壳（Tauri）
+ * 加载的**也是 dist-h5**（见 desktop/src-tauri/tauri.conf.json 的 frontendDist），
+ * 所以「浏览器 / 手机浏览器 / macOS 桌面版」三者都为 true。
+ *
+ * - 判断「是不是 PC / 宽屏」→ 用 useIsMobile()（视口媒体查询）
+ * - 判断「是不是桌面壳」→ 用 isDesktop()（lib/desktop.ts，探 __TAURI_INTERNALS__）
+ * - 判断「有没有 DOM」→ 用本函数（小程序端无 DOM）
+ */
+export function isWebView(): boolean {
   return process.env.TARO_ENV === 'h5'
 }
 
