@@ -12,7 +12,7 @@ import { bus } from '@/plugin/bus'
 import { api } from '@/api/client'
 import { streamAiResponse } from '@/api/stream'
 
-import { cn, formatDateTime, isWebView } from '@/lib/utils'
+import { cn, designPx, formatDateTime, isWebView } from '@/lib/utils'
 import { useIsMobile } from '@/hooks'
 import { useT } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/toast'
@@ -576,7 +576,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     <Button
       size="icon"
       className="shrink-0"
-      style={{ width: isWebView() ? 38 : 60, height: isWebView() ? 38 : 60 }}
+      style={{ width: designPx(38), height: designPx(38) }}
       onClick={streaming ? handleAbort : handleSend}
     >
       <Icon name={streaming ? 'stop' : 'send'} size={isWebView() ? 18 : 28} />
@@ -618,7 +618,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       <SlotHost
         slot="aipanel.head"
         defaults={
-          <View className="flex items-end gap-2 shrink-0" style={{ height: isWebView() ? 30 : 50 }}>
+          <View className="flex items-end gap-2 shrink-0" style={{ height: designPx(30) }}>
             <SlotHost slot="aipanel.head.left" />
             {/* middle 必须 flex-1 + minWidth:0：会话 tab 多时由内部 ScrollView scrollX 横向滚动，
                 而不是把 flex 布局撑破产生页面级横向滚动条（H5/wxapp 均适用） */}
@@ -689,7 +689,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
       <SlotHost
         slot="aipanel.foot"
         defaults={
-          <View className="flex items-center gap-2 shrink-0" style={{ height: isWebView() ? 38 : 60 }}>
+          <View className="flex items-center gap-2 shrink-0" style={{ height: designPx(38) }}>
             <SlotHost slot="aipanel.foot.left" />
             <View className="flex-1">
               <SlotHost slot="aipanel.foot.middle" defaults={renderInput()} />

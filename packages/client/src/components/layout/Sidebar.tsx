@@ -405,7 +405,7 @@ export const Sidebar = memo(function Sidebar({
       <SlotHost
         slot="sidepanel.head"
         defaults={
-          <View className="flex items-center gap-2 shrink-0" style={{ height: isWebView() ? 38 : 60 }}>
+          <View className="flex items-center gap-2 shrink-0" style={{ height: designPx(38) }}>
             <View className="flex-1 flex items-center" style={{ minWidth: 0 }}>
               <SlotHost
                 slot="sidepanel.head.left"
@@ -660,7 +660,7 @@ export const Sidebar = memo(function Sidebar({
       <SlotHost
         slot="sidepanel.foot"
         defaults={
-          <View className="flex items-center shrink-0" style={{ height: isWebView() ? 38 : 60 }}>
+          <View className="flex items-center shrink-0" style={{ height: designPx(38) }}>
             <View className="flex-1">
               <SlotHost slot="sidepanel.foot.left" />
             </View>

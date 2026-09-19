@@ -10,7 +10,7 @@ import { useI18nStore } from '@/stores/i18nStore'
 import { useTheme } from '@/stores/theme'
 import { t } from '@/lib/i18n'
 import { getSettingsLauncher } from '@/plugin/launcher'
-import { cn, isWebView } from '@/lib/utils'
+import { cn, designPx, isWebView } from '@/lib/utils'
 
 const STYLE_OPTIONS = [
   { value: 'gentle', label: () => t('settings.gentle') },
@@ -89,7 +89,7 @@ export function SettingsMenu({ showReviewStyle = false }: SettingsMenuProps) {
         style={{ padding: 8, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}
         onClick={handleGearClick}
       >
-        <Icon name="gear" size={isWebView() ? 24 : 36} />
+        <Icon name="gear" size={designPx(24)} />
       </View>
 
       {open && (
