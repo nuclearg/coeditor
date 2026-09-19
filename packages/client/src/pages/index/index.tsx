@@ -10,7 +10,7 @@ import { Markdown } from '@/components/markdown/Markdown'
 import { useDocumentStore, useLayoutStore, useAttachmentStore } from '@/stores'
 import { bus } from '@/plugin/bus'
 import { t, localize } from '@/lib/i18n'
-import { cn, isH5 } from '@/lib/utils'
+import { cn, isWebView } from '@/lib/utils'
 import { useI18nStore } from '@/stores/i18nStore'
 import { api } from '@/api/client'
 import type { Document, DocumentTemplate, LocalizedText } from '@coeditor/shared'
@@ -147,7 +147,7 @@ export default function DocumentListPage() {
    * 小程序端无文件选择能力，入口仅 H5 渲染。
    */
   const handleImport = () => {
-    if (importing || !isH5()) return
+    if (importing || !isWebView()) return
     const tpl = requireImportPrereq()
     if (!tpl) return
     const input = document.createElement('input')
@@ -177,7 +177,7 @@ export default function DocumentListPage() {
 
   /** 导入文字：粘贴/手输 → 前置校验（已选模板 + 已填标题，不再回退首行/默认标题）→ AI 分章 */
   const handleTextImport = async () => {
-    if (importing || !isH5()) return
+    if (importing || !isWebView()) return
     const tpl = requireImportPrereq()
     if (!tpl) return
     const text = textContent.trim()
@@ -201,7 +201,7 @@ export default function DocumentListPage() {
   // 导出单篇文档为 markdown（H5）：POST documents.export → blob → a.download。
   // 文件名优先取响应头 Content-Disposition，否则用文档标题。
   const exportDoc = async (doc: Document) => {
-    if (exportingDoc === doc.id || !isH5()) return
+    if (exportingDoc === doc.id || !isWebView()) return
     setExportingDoc(doc.id)
     try {
       const res = await fetch(`${API_BASE_URL}/api/documents.export`, {
@@ -265,7 +265,7 @@ export default function DocumentListPage() {
                   <View className="truncate">
                     {selectedTemplate ? templateOptionLabel(selectedTemplate) : t('home.templatePlaceholder')}
                   </View>
-                  <Icon name="chevronDown" size={isH5() ? 18 : 22} color="var(--muted-fg)" />
+                  <Icon name="chevronDown" size={isWebView() ? 18 : 22} color="var(--muted-fg)" />
                 </View>
 
                 {templateOpen && (
@@ -290,7 +290,7 @@ export default function DocumentListPage() {
                           >
                             <View className="flex-1 truncate">{templateOptionLabel(tpl)}</View>
                             {tpl.id === templateId && (
-                              <Icon name="save" size={isH5() ? 14 : 22} color="var(--accent-warm)" />
+                              <Icon name="save" size={isWebView() ? 14 : 22} color="var(--accent-warm)" />
                             )}
                           </View>
                         ))
@@ -325,7 +325,7 @@ export default function DocumentListPage() {
               >
                 {t('doc.create')}
               </Button>
-              {isH5() && (
+              {isWebView() && (
                 <>
                   <Button variant="outline" onClick={() => setTextImportOpen(true)} disabled={importing || !canImport}>
                     {importing ? t('home.importing') : t('home.importText')}
@@ -337,7 +337,7 @@ export default function DocumentListPage() {
               )}
             </View>
             {/* 导入前置提示：未选模板/未填标题时禁用导入入口 */}
-            {isH5() && !canImport && (
+            {isWebView() && !canImport && (
               <View className="muted" style={{ marginTop: 6, fontSize: 12 }}>{t('home.importPrereq')}</View>
             )}
           </View>
@@ -359,7 +359,7 @@ export default function DocumentListPage() {
               ) : documents.length === 0 ? (
                 <View className="empty-state">
                   <View className="empty-icon">
-                    <Icon name="book" size={isH5() ? 40 : 72} color="var(--muted-fg)" />
+                    <Icon name="book" size={isWebView() ? 40 : 72} color="var(--muted-fg)" />
                   </View>
                   <View className="empty-text">{t('doc.emptyHint')}</View>
                 </View>
@@ -371,7 +371,7 @@ export default function DocumentListPage() {
                     onClick={() => Taro.navigateTo({ url: `/pages/edit/index?docId=${doc.id}` })}
                   >
                     <View className="doc-icon">
-                      <Icon name="book" size={isH5() ? 18 : 30} color="var(--accent-warm)" />
+                      <Icon name="book" size={isWebView() ? 18 : 30} color="var(--accent-warm)" />
                     </View>
                     <View className="flex-1" style={{ minWidth: 0 }}>
                       <View className="doc-title truncate">{doc.title}</View>
@@ -389,7 +389,7 @@ export default function DocumentListPage() {
                           setMenuDoc(menuDoc?.id === doc.id ? null : doc)
                         }}
                       >
-                        <Icon name="more" size={isH5() ? 16 : 26} color="var(--muted-fg)" />
+                        <Icon name="more" size={isWebView() ? 16 : 26} color="var(--muted-fg)" />
                       </View>
                       {menuDoc?.id === doc.id && (
                         <>
@@ -413,7 +413,7 @@ export default function DocumentListPage() {
                             >
                               {t('common.rename')}
                             </View>
-                            {isH5() && (
+                            {isWebView() && (
                               <View
                                 className="doc-menu-item"
                                 onClick={(e) => {
@@ -447,7 +447,7 @@ export default function DocumentListPage() {
         </View>
       }
       footer={
-        <View className="text-xs text-muted" style={{ fontSize: isH5() ? 12 : 22 }}>{t('footer.copyright')}</View>
+        <View className="text-xs text-muted" style={{ fontSize: isWebView() ? 12 : 22 }}>{t('footer.copyright')}</View>
       }
     >
       <Dialog

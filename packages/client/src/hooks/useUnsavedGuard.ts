@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import Taro from '@tarojs/taro'
-import { isH5 } from '@/lib/utils'
+import { isWebView } from '@/lib/utils'
 import type { DraftItem } from '@/components/document/DraftTabs'
 
 export type PendingTarget =
@@ -37,7 +37,7 @@ export function useUnsavedGuard({
 
   // Warn on page close/refresh while there are unsaved changes (H5 only)
   useEffect(() => {
-    if (!dirty || !isH5()) return
+    if (!dirty || !isWebView()) return
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault()
       e.returnValue = ''

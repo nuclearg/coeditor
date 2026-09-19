@@ -1,6 +1,6 @@
 import { Input as TaroInput } from '@tarojs/components'
 import { useEffect, useRef } from 'react'
-import { cn, isH5 } from '@/lib/utils'
+import { cn, isWebView } from '@/lib/utils'
 
 interface InputProps {
   value?: string
@@ -33,7 +33,7 @@ export function Input({
   // 改为手动聚焦原生 <input>（taro-input-core 的内部元素在 React commit
   // 后才渲染，需等一帧），绕过 React 的 autoFocus 机制。
   useEffect(() => {
-    if (!isH5() || !focus) return
+    if (!isWebView() || !focus) return
     const id = setTimeout(() => {
       const native = coreRef.current?.querySelector?.('input') as HTMLInputElement | null
       if (native && document.activeElement !== native) native.focus()
@@ -49,7 +49,7 @@ export function Input({
       placeholder={placeholder}
       password={type === 'password'}
       disabled={disabled}
-      focus={isH5() ? false : focus}
+      focus={isWebView() ? false : focus}
       onInput={(e) => onChange?.(e.detail.value)}
       onConfirm={() => onEnter?.()}
       onBlur={(e) => onBlur?.(e.detail.value)}

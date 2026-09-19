@@ -6,7 +6,7 @@ import {
 import type { SelectionState } from './useViewMode'
 import type { DraftItem } from '@/components/document/DraftTabs'
 import { t } from '@/lib/i18n'
-import { getCurrentDraft, isH5 } from '@/lib/utils'
+import { getCurrentDraft, isWebView } from '@/lib/utils'
 import { showErrorToast, showToast } from '@/lib/toast'
 import { getDraftSnapshot, saveDraftSnapshot, clearDraftSnapshot } from '@/lib/draftPersistence'
 import type { DocumentTemplate, Attachment } from '@coeditor/shared'
@@ -204,12 +204,12 @@ export function useDraftManager({
   // 卸载/页面隐藏（H5 刷新/关闭前）立即把最后一次编辑落盘
   useEffect(() => {
     const onPageHide = () => flushPendingSnapshot()
-    if (isH5() && typeof window !== 'undefined') {
+    if (isWebView() && typeof window !== 'undefined') {
       window.addEventListener('pagehide', onPageHide)
       window.addEventListener('beforeunload', onPageHide)
     }
     return () => {
-      if (isH5() && typeof window !== 'undefined') {
+      if (isWebView() && typeof window !== 'undefined') {
         window.removeEventListener('pagehide', onPageHide)
         window.removeEventListener('beforeunload', onPageHide)
       }

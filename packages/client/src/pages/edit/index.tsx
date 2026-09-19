@@ -13,7 +13,7 @@ import { useI18nStore } from '@/stores/i18nStore'
 import { useViewMode, useDraftManager, useUnsavedGuard } from '@/hooks'
 import { t, localize } from '@/lib/i18n'
 import { getLastView, saveLastView, type SavedView } from '@/lib/draftPersistence'
-import { isH5 } from '@/lib/utils'
+import { isWebView } from '@/lib/utils'
 import { api } from '@/api/client'
 import type { Document } from '@coeditor/shared'
 
@@ -208,7 +208,7 @@ export default function DocumentEditPage() {
   const setBreadcrumb = useLayoutStore((s) => s.setBreadcrumb)
   useEffect(() => {
     setBreadcrumb(titleBar)
-    if (isH5()) {
+    if (isWebView()) {
       if (typeof document !== 'undefined') document.title = titleBar
     } else {
       Taro.setNavigationBarTitle({ title: titleBar }).catch(() => {})

@@ -1,5 +1,5 @@
 import { Text, View } from '@tarojs/components'
-import { isH5 } from '@/lib/utils'
+import { isWebView } from '@/lib/utils'
 
 const ICONS: Record<string, string> = {
   menu: '☰',
@@ -42,7 +42,7 @@ interface IconProps {
 
 export function Icon({ name, size = 28, color }: IconProps) {
   // H5：齿轮用标准 SVG mask 渲染（跟随 currentColor/传入色）；weapp 微信字体下 U+2699 本就是文本齿轮，保持字符
-  if (name === 'gear' && isH5()) {
+  if (name === 'gear' && isWebView()) {
     const mask = `url("data:image/svg+xml,${encodeURIComponent(GEAR_SVG)}")`
     return (
       <View

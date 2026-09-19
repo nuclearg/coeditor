@@ -6,7 +6,7 @@ import { SlotHost } from '@/plugin/SlotHost'
 import { getSettingsPageLabel } from '@/plugin'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { t } from '@/lib/i18n'
-import { isH5 } from '@/lib/utils'
+import { isWebView } from '@/lib/utils'
 
 /**
  * 设置页（page.settings）：固定页面形态 variant="settings"（与 home/editor 齐名）。
@@ -23,7 +23,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     useLayoutStore.getState().setBreadcrumb(title)
-    if (isH5()) {
+    if (isWebView()) {
       if (typeof document !== 'undefined') document.title = title
     } else {
       Taro.setNavigationBarTitle({ title }).catch(() => {})
@@ -31,7 +31,7 @@ export default function SettingsPage() {
     return () => {
       useLayoutStore.getState().setBreadcrumb('')
       // H5 返回后恢复默认标签页标题（品牌名）；小程序导航栏随页面栈自动
-      if (isH5() && typeof document !== 'undefined') {
+      if (isWebView() && typeof document !== 'undefined') {
         document.title = t('brand.name')
       }
     }
@@ -42,7 +42,7 @@ export default function SettingsPage() {
       variant="settings"
       content={<SlotHost slot="settings.body" />}
       footer={
-        <View className="text-xs text-muted" style={{ fontSize: isH5() ? 12 : 22 }}>{t('footer.copyright')}</View>
+        <View className="text-xs text-muted" style={{ fontSize: isWebView() ? 12 : 22 }}>{t('footer.copyright')}</View>
       }
     />
   )

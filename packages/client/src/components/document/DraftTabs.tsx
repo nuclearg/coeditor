@@ -4,7 +4,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { TabContextMenu, type TabMenuState } from '@/components/ui/TabContextMenu'
-import { cn, formatDateTime, isH5 } from '@/lib/utils'
+import { cn, formatDateTime, isWebView } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
 import type { ParagraphDraft, AttachmentDraft } from '@coeditor/shared'
 
@@ -36,7 +36,7 @@ export function DraftTabs({ drafts, currentDraftId, onSelect, onDelete, onDelete
   // tab 右键菜单（H5）：命中版本 tab 行 → 打开菜单（位置=光标，index=展示顺序）。
   // 作用域限定在 draft-tab-bar 内，避免与 AI 会话 tab 的右键菜单互相干扰。
   useEffect(() => {
-    if (!isH5()) return
+    if (!isWebView()) return
     const onContextMenu = (e: MouseEvent) => {
       const row = (e.target as HTMLElement).closest?.('.draft-tab-bar .tab-row') as HTMLElement | null
       if (!row) return

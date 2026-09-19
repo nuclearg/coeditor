@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 import { createParser, type EventSourceMessage } from 'eventsource-parser'
-import { isH5 } from '@/lib/utils'
+import { isWebView } from '@/lib/utils'
 import { t } from '@/lib/i18n'
 import { buildHeaders, notifyResponse } from './client'
 
@@ -244,7 +244,7 @@ export function streamAiResponse(
   callbacks: StreamCallbacks,
   signal?: AbortSignal,
 ): Promise<{ content: string; thinking: string }> {
-  if (isH5()) {
+  if (isWebView()) {
     return streamH5(params, callbacks, signal)
   }
   return streamWeapp(params, callbacks, signal)

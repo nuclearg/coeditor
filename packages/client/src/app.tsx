@@ -4,7 +4,7 @@ import Taro, { useLaunch } from '@tarojs/taro'
 import { runInit, mergePluginDictionaries, getPlugins } from '@/plugin'
 import { SlotHost } from '@/plugin/SlotHost'
 import { subscribeSystemTheme, useTheme } from '@/stores/theme'
-import { cn, isH5 } from '@/lib/utils'
+import { cn, isWebView } from '@/lib/utils'
 import { t } from '@/lib/i18n'
 
 // H5 端使用 web 尺寸覆盖层（小程序保留移动端尺寸）
@@ -31,7 +31,7 @@ class ErrorBoundary extends Component<PropsWithChildren, ErrorBoundaryState> {
   }
 
   handleReload = () => {
-    if (isH5()) {
+    if (isWebView()) {
       window.location.reload()
     } else {
       Taro.reLaunch({ url: '/pages/index/index' }).catch(() => {})
@@ -63,7 +63,7 @@ function App({ children }: PropsWithChildren) {
     const shouldSuppress = (reason: unknown) =>
       reason instanceof Error && reason.name === 'PluginHandled'
 
-    if (isH5() && typeof window !== 'undefined') {
+    if (isWebView() && typeof window !== 'undefined') {
       const handler = (e: PromiseRejectionEvent) => {
         e.preventDefault()
         if (shouldSuppress(e.reason)) return
@@ -108,7 +108,7 @@ function App({ children }: PropsWithChildren) {
   // color-scheme 是它判定"页面是否适配深色"的依据，动态跟随主题即可禁用该干预，
   // 同时让滚动条/表单等原生控件颜色与我们的主题一致
   useEffect(() => {
-    if (isH5() && typeof document !== 'undefined') {
+    if (isWebView() && typeof document !== 'undefined') {
       document.documentElement.style.colorScheme = theme
     }
   }, [theme])
@@ -118,7 +118,7 @@ function App({ children }: PropsWithChildren) {
 
   return (
     <View className={cn('app', theme === 'dark' && 'dark')}>
-      {isH5() && pluginStyles !== '' && <style dangerouslySetInnerHTML={{ __html: pluginStyles }} />}
+      {isWebView() && pluginStyles !== '' && <style dangerouslySetInnerHTML={{ __html: pluginStyles }} />}
       <ErrorBoundary>
         {children}
         <SlotHost slot="root" ctx={{}} />
