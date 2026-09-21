@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  **分发用**（Developer ID 签名 + 公证）的 entitlements。与 ad-hoc 用的
+  macos-entitlements.plist 是两份，别混用：
+
+  为什么需要这两条：
+    CoEditor 桌面端带一个 externalBin sidecar（coeditor-server），它是 bun 编译的
+    单文件可执行，内含 JavaScriptCore。开启 hardened runtime 后，JSC 申请可写可执行
+    内存做 JIT 会被系统拒绝——进程直接被 SIGKILL。因此必须显式授予：
+      - com.apple.security.cs.allow-jit                    ：允许 JIT
+      - com.apple.security.cs.allow-unsigned-executable-memory：允许可写可执行内存
+
+  为什么**没有** disable-library-validation：
+    ad-hoc 签名没有 Team ID，校验内嵌库时会失败，所以那份放开；
+    分发时所有内嵌二进制（主程序、sidecar）都由同一个 Developer ID（同 Team）签名，
+    这条放开就没有必要——去掉可以少一个安全面。若实测仍报内嵌组件加载失败，
+    再加回来即可：Apple 的公证不会因这一条拒绝。
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+</dict>
+</plist>

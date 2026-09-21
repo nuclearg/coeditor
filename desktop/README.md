@@ -84,16 +84,21 @@ bash scripts/verify-macos-signature.sh src-tauri/target/release/bundle/dmg/CoEdi
 > 也不要把 `$VAR` 直接紧跟中文全角标点（如 `（$APP）`），bash 3.2 会把全角字符当成变量名的一部分而报
 > unbound variable。需要相邻时一律写 `${APP}`。
 
-**正式分发仍需** Apple Developer ID 签名 + 公证（$99/年）——ad-hoc 签名无法免除用户在
-「隐私与安全性」中手动放行这一步。
+**正式分发走 Developer ID 签名 + 公证**：CI 已接好完整链路（证书导入 → 签名 → 公证 .app → staple →
+对 `.dmg` 缺票时显式补公证），并在末尾做 fail-closed 校验。**你要做的只有一件事：按
+[`docs/desktop-signing.md`](../docs/desktop-signing.md) 在 Apple 侧建证书/API Key 并把 8 个
+Secrets 配到仓库**——没配也能跑，会自动降级为 ad-hoc（同下方行为）。
 
 ## 关键文件
 
 | 路径 | 说明 |
 |---|---|
-| `src-tauri/tauri.conf.json` | 窗口/捆绑配置；`externalBin` + `resources`（dist-h5）+ `macOS.signingIdentity`（ad-hoc） |
-| `scripts/verify-macos-signature.sh` | 签名校验闸门（CI 失败即中断）+ ad-hoc 重签修复 |
-| `scripts/macos-entitlements.plist` | ad-hoc 重签用 entitlements（WebKit JIT / 内嵌库加载；正式分发勿沿用） |
+| `src-tauri/tauri.conf.json` | 窗口/捆绑配置；`externalBin` + `resources`（dist-h5）+ `macOS.signingIdentity`（本地 ad-hoc 默认，CI 由 `APPLE_SIGNING_IDENTITY` 覆盖） |
+| `scripts/verify-macos-signature.sh` | ① 签名完整性闸门（CI 失败即中断）+ ad-hoc 重签修复 |
+| `scripts/verify-macos-dist.sh` | ② 分发达标闸门：Developer ID / hardened runtime / Gatekeeper / 公证票据；`.dmg` 缺票时显式补公证 |
+| `scripts/macos-entitlements.plist` | **ad-hoc** 重签用 entitlements（含 `disable-library-validation`，因为 ad-hoc 没有 Team ID） |
+| `scripts/macos-entitlements-dist.plist` | **分发**用 entitlements（只保留 JIT 相关两条；sidecar 是 bun/JSC 单文件，必须有） |
+| [`docs/desktop-signing.md`](../docs/desktop-signing.md) | 签名/公证运行手册：Apple 侧步骤、Secrets 清单、排障、本地验证命令 |
 | `src-tauri/src/lib.rs` | sidecar 生命周期：随机端口 → 拉起（传 `COEDITOR_WEB_ROOT`）→ 就绪探测 → 退出 kill；**不涉及数据目录逻辑** |
 | `../packages/server/src/index.ts` | `COEDITOR_WEB_ROOT` 静态服务（单端口同源，桌面壳专用） |
 | `../packages/server/resources/` | 内置种子资源（templates/*.json，含审阅 prompt），构建时内联 |
@@ -114,8 +119,9 @@ bash scripts/verify-macos-signature.sh src-tauri/target/release/bundle/dmg/CoEdi
 ## 已知限制 / 后续
 
 - macOS 先行；Windows/Linux 需在 `tauri.conf.json` 调整 CSP 与 targets，并在 CI 矩阵补构建
-- **发布分发需 Apple Developer ID 签名 + 公证（$99/年）**：当前仅 ad-hoc 签名，用户首次打开需在
-  「系统设置 → 隐私与安全性 → 仍要打开」放行一次；未公证的包无法做到零摩擦
+- **macOS 签名/公证：链路已就绪，待配置凭据**——CI 已实现 Developer ID 签名 + 公证 + staple + 双层验证闸门；
+  仓库还没配 Apple Secrets，所以当前产物仍是 ad-hoc（用户首次打开需在「系统设置 → 隐私与安全性 → 仍要打开」放行一次）。
+  按 [`docs/desktop-signing.md`](../docs/desktop-signing.md) 配好 8 个 Secrets 即自动切换为正式分发，无需再改代码
 - Windows 侧尚未签名：`coeditor-server.exe`（sidecar）与 NSIS setup 需分别 Authenticode 签名，
   否则 SmartScreen 红屏；OV 证书约 $150–300/年，**别买 EV**（2024 起不再有即时信任待遇）
 - 自更新（tauri-updater）未启用

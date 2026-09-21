@@ -45,18 +45,85 @@ jobs:
           npm install
         working-directory: desktop
 
+      # ---------- Apple 签名 + 公证（未配 secrets 时自动降级为 ad-hoc） ----------
+      # 凭据准备与步骤细节见 docs/desktop-signing.md
+      - name: Prepare notarization API key (.p8)
+        env:
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_API_KEY_P8_BASE64:-}" ] || [ -z "${APPLE_API_KEY:-}" ]; then
+            echo "::notice::未配置 APPLE_API_KEY / APPLE_API_KEY_P8_BASE64——不做公证（用户首次打开需手动放行）"
+            exit 0
+          fi
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8"
+          echo "APPLE_API_KEY_PATH=$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8" >> "$GITHUB_ENV"
+          echo "公证凭据已就位：AuthKey_${APPLE_API_KEY}.p8"
+
+      - name: Import Apple signing certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_CERTIFICATE:-}" ]; then
+            echo "::warning::未配置 APPLE_CERTIFICATE——本次为 ad-hoc 签名，用户首次打开需在「隐私与安全性」放行（见 docs/desktop-signing.md）"
+            exit 0
+          fi
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          security list-keychains -d user -s build.keychain
+          security import "$RUNNER_TEMP/certificate.p12" -k build.keychain \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain >/dev/null
+          rm -f "$RUNNER_TEMP/certificate.p12"
+          security find-identity -v -p codesigning build.keychain
+          IDENTITY="$(security find-identity -v -p codesigning build.keychain | awk -F'"' '/Developer ID Application/ {print $2; exit}')"
+          if [ -z "$IDENTITY" ]; then
+            echo "::error::keychain 里没有 Developer ID Application 证书（.p12 是否只导出了证书、未含私钥？）"
+            exit 1
+          fi
+          echo "APPLE_SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "已导入签名身份：$IDENTITY"
+
+      - name: Prepare distribution entitlements config
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/tauri-dist.conf.json" <<EOF
+          { "bundle": { "macOS": { "entitlements": "$GITHUB_WORKSPACE/desktop/scripts/macos-entitlements-dist.plist" } } }
+          EOF
+          cat "$RUNNER_TEMP/tauri-dist.conf.json"
+          echo "TAURI_DIST_CONFIG=$RUNNER_TEMP/tauri-dist.conf.json" >> "$GITHUB_ENV"
+
       # 无 tag：只构建（beforeBuildCommand 自产 H5 + sidecar），不发布
       - name: Build dmg
         uses: tauri-apps/tauri-action@v0
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: ./desktop
-          args: '--bundles dmg'
+          args: '--bundles dmg --config ${{ env.TAURI_DIST_CONFIG }}'
 
-      # 签名闸门：坏签名的包用户根本无法运行（内核 SIGKILL，连「仍要打开」都不出现）。
-      # tauri.conf.json 已配 bundle.macOS.signingIdentity="-"（ad-hoc），此处校验并兜底重签。
-      # 校验失败即中断，避免把打不开的包传出去。
-      - name: Verify macOS signature (fail closed)
+      # 签名闸门（fail closed）：坏签名的包用户根本无法运行（内核 SIGKILL，连「仍要打开」都不出现）。
+      # 两道：① 签名完整性（ad-hoc 时允许自动重签修复）② 分发达标（Developer ID + 公证票据）
+      - name: Verify macOS signature & notarization (fail closed)
         working-directory: desktop
+        env:
+          REQUIRE_DEVELOPER_ID: ${{ secrets.APPLE_CERTIFICATE != '' && '1' || '0' }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -65,8 +132,10 @@ jobs:
             echo "未找到任何 .app/.dmg 产物" >&2; exit 1
           fi
           for t in "${targets[@]}"; do
-            echo "==> 校验 $t"
-            bash scripts/verify-macos-signature.sh "$t"
+            echo "==> ① 签名完整性 $t"
+            bash scripts/verify-macos-signature.sh "$t" "${APPLE_SIGNING_IDENTITY:-}"
+            echo "==> ② 分发达标 $t"
+            bash scripts/verify-macos-dist.sh "$t"
           done
 
       - name: Upload dmg artifact
