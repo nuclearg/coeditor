@@ -94,8 +94,17 @@ jobs:
           echo "已导入签名身份：$IDENTITY"
 
       - name: Prepare distribution entitlements config
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
         run: |
           set -euo pipefail
+          # 只有真走 Developer ID 分发时才覆盖 entitlements：分发版去掉了
+          # disable-library-validation，而 ad-hoc（无证书）恰恰需要它，否则运行期
+          # 加载内嵌组件会失败。未配证书就保持仓库默认，行为与今天一致。
+          if [ -z "${APPLE_CERTIFICATE:-}" ]; then
+            echo "::notice::未配置证书，本次不覆盖 entitlements（保持 ad-hoc 默认）"
+            exit 0
+          fi
           cat > "$RUNNER_TEMP/tauri-dist.conf.json" <<EOF
           { "bundle": { "macOS": { "entitlements": "$GITHUB_WORKSPACE/desktop/scripts/macos-entitlements-dist.plist" } } }
           EOF
@@ -113,7 +122,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: ./desktop
-          args: '--bundles dmg --config ${{ env.TAURI_DIST_CONFIG }}'
+          args: --bundles dmg ${{ env.TAURI_DIST_CONFIG != '' && format('--config {0}', env.TAURI_DIST_CONFIG) || '' }}
 
       # 签名闸门（fail closed）：坏签名的包用户根本无法运行（内核 SIGKILL，连「仍要打开」都不出现）。
       # 两道：① 签名完整性（ad-hoc 时允许自动重签修复）② 分发达标（Developer ID + 公证票据）
