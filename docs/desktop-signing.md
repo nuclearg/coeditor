@@ -54,7 +54,35 @@ CSR ─┐
 
 ### 2.3 导出 .p12 并转 base64
 
-钥匙串访问 → **我的证书** → 找到 `Developer ID Application: <你的名字> (TEAMID)` → **展开它**（必须展开到私钥那一行）→ 右键私钥 → 导出 → 存成 `.p12` 并设一个密码。
+钥匙串访问 → 左侧选 **login** 钥匙串 → **我的证书** → 找到
+`Developer ID Application: <你的名字> (TEAMID)` → **点开左侧三角展开它** →
+导出时**必须选到私钥**：
+
+- 方式一：右键**展开后的「私钥」那一行** → 导出
+- 方式二：按住 ⌘ 同时选中「证书」与「私钥」两行 → 右键 → 导出
+
+> ⚠️ **格式下拉里只有 `.cer` / `.pem` / `.p7b`、没有 `.p12`？**
+> 那说明你选中的是**证书行**（或只选了证书）。这三种都是"只含证书"的格式；
+> `.p12`（Personal Information Exchange）是"证书＋私钥"打包格式，**只有选中内容含私钥时
+> 才会出现在下拉里**。按上面两种方式之一重选即可，不需要重新签发证书。
+
+命令行备选（不想在 GUI 里点，或 GUI 行为异常时）：
+
+```bash
+# -t identities = 导出"身份"（证书+私钥），-f pkcs12 = p12 格式
+security export -t identities -f pkcs12 \
+  -k ~/Library/Keychains/login.keychain-db \
+  -o ~/Desktop/certificate.p12 -P '<给 p12 设的密码>'
+```
+
+导出后**先验证里面确实有私钥**（看到 `Shrouded Keybag` 才算对）：
+
+```bash
+openssl pkcs12 -in ~/Desktop/certificate.p12 -passin pass:'<密码>' -info -noout 2>&1 \
+  | grep -E "Shrouded Keybag|friendlyName|subject="
+```
+
+然后转 base64 备用：
 
 ```bash
 openssl base64 -A -in ~/Desktop/certificate.p12 -out /tmp/cert-base64.txt   # 注意 -A：不要换行
@@ -170,7 +198,9 @@ cd desktop && npx tauri build --bundles app
 ## 8. 常见坑
 
 - **证书建不出来**：Developer ID 只有 Account Holder 能建（见 2.2）。
-- **导出的 .p12 里没有私钥**：必须在钥匙串里展开证书条目、右键**私钥**行导出；只右键证书行导出的是公钥，CI 会报找不到身份。
+- **导出时格式下拉里没有 `.p12`**（只有 `.cer/.pem/.p7b`）：选中的是证书行，没带上私钥。
+  点开三角展开、右键**私钥**行，或 ⌘ 同时选中证书+私钥——详见 2.3。**不用重新签发证书**。
+  导出后务必用 2.3 的 `openssl pkcs12 -info` 确认有 `Shrouded Keybag`，否则 CI 会报找不到身份。
 - **`base64` 带换行**：一定加 `-A`（单行），否则 GitHub Secret 里塞进换行会解码失败。
 - **公证被拒**：多为 hardened runtime 下缺权限或签名不完整。用第 7 节的 `notarytool log` 看具体条目；`.p8` 只能下载一次，丢了要重新建 Key。
 - **`APPLE_SIGNING_IDENTITY` 必须与证书完全一致**（含括号里的 Team ID），差一个字符就会回落到 ad-hoc。
