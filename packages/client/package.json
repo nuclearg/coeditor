@@ -18,7 +18,6 @@
     "@tarojs/components": "^4.1.0",
     "@tarojs/helper": "^4.1.0",
     "@tarojs/plugin-platform-h5": "^4.1.0",
-    "@tarojs/plugin-platform-weapp": "^4.1.0",
     "@tarojs/react": "^4.1.0",
     "@tarojs/runtime": "^4.1.0",
     "@tarojs/shared": "^4.1.0",
