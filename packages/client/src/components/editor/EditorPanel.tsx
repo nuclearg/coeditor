@@ -24,6 +24,10 @@ interface EditorPanelProps {
   onDeleteDraft: (draftId: string) => void
   /** 批量删除草稿版本（tab 右键菜单：关闭右侧/关闭其它） */
   onDeleteDrafts?: (draftIds: string[]) => void
+  /** 是否还有未加载的历史版本（tab 栏显示「…」） */
+  draftsHasMore?: boolean
+  /** 点「…」：拉取全部历史版本 */
+  onExpandDrafts?: () => void
   dirty: boolean
   saving: boolean
   doSave: () => Promise<boolean>
@@ -49,6 +53,8 @@ export function EditorPanel({
   onSelectDraft,
   onDeleteDraft,
   onDeleteDrafts,
+  draftsHasMore,
+  onExpandDrafts,
   dirty,
   saving,
   doSave,
@@ -59,7 +65,7 @@ export function EditorPanel({
   const isMobile = useIsMobile()
 
   const headbarMiddleDefaults = isEditable ? (
-    <DraftTabs drafts={activeDrafts} currentDraftId={activeCurrentDraftId} onSelect={onSelectDraft} onDelete={onDeleteDraft} onDeleteMany={onDeleteDrafts} />
+    <DraftTabs drafts={activeDrafts} currentDraftId={activeCurrentDraftId} onSelect={onSelectDraft} onDelete={onDeleteDraft} onDeleteMany={onDeleteDrafts} hasMore={draftsHasMore} onExpand={onExpandDrafts} />
   ) : viewTitle ? (
     <View className="tab active" style={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>{viewTitle}</View>
   ) : undefined

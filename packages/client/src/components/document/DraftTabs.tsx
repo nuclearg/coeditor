@@ -17,9 +17,17 @@ interface DraftTabsProps {
   onDelete: (draftId: string) => void
   /** 批量删除（右键菜单：关闭右侧/关闭其它）。未传时退化为逐个 onDelete。 */
   onDeleteMany?: (draftIds: string[]) => void
+  /**
+   * 是否还有未加载的历史版本（列表被 limit 截断过）。为 true 时在最右侧显示「…」tab，
+   * 点击回调 {@link onExpand} 拉全部版本 —— 版本可能很多（每个草稿都带整段正文），
+   * 默认只取最近几条，别让一个段落的历史把 tab 栏和请求体都撑爆。
+   */
+  hasMore?: boolean
+  /** 点「…」：拉取该段落/附件的全部历史版本 */
+  onExpand?: () => void
 }
 
-export function DraftTabs({ drafts, currentDraftId, onSelect, onDelete, onDeleteMany }: DraftTabsProps) {
+export function DraftTabs({ drafts, currentDraftId, onSelect, onDelete, onDeleteMany, hasMore, onExpand }: DraftTabsProps) {
   const t = useT()
   const sorted = [...drafts].sort((a, b) => b.timeCreated.localeCompare(a.timeCreated))
   const [confirming, setConfirming] = useState<string | null>(null)
@@ -101,6 +109,20 @@ export function DraftTabs({ drafts, currentDraftId, onSelect, onDelete, onDelete
             </View>
           )
         })}
+
+        {/* 「…」：还有未加载的历史版本时出现在最右（点击拉全部）。
+            放在 ScrollView 内部而不是外面：它属于这排 tab 的延续，横向滚动时要跟着一起滚。 */}
+        {hasMore && (
+          <View className="flex items-end shrink-0" style={{ borderRight: '1px solid var(--border)' }}>
+            <View
+              className="tab flex items-center tab-row"
+              style={{ display: 'flex', alignItems: 'center', letterSpacing: 1 }}
+              onClick={() => onExpand?.()}
+            >
+              …
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       <Dialog

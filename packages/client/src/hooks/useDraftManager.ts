@@ -41,11 +41,15 @@ export function useDraftManager({
   const loadParagraphs = useParagraphStore((s) => s.loadParagraphs)
   const updateParagraphDraftId = useParagraphStore((s) => s.updateParagraphDraftId)
   const draftsByParagraph = useParagraphDraftStore((s) => s.draftsByParagraph)
+  const hasMoreByParagraph = useParagraphDraftStore((s) => s.hasMoreByParagraph)
   const loadDrafts = useParagraphDraftStore((s) => s.loadDrafts)
+  const expandDrafts = useParagraphDraftStore((s) => s.expandDrafts)
   const createDraft = useParagraphDraftStore((s) => s.createDraft)
   const deleteDraft = useParagraphDraftStore((s) => s.deleteDraft)
   const attachments = useAttachmentStore((s) => s.attachments)
   const draftsByAttachment = useAttachmentStore((s) => s.draftsByAttachment)
+  const hasMoreByAttachment = useAttachmentStore((s) => s.hasMoreByAttachment)
+  const expandAttachmentDrafts = useAttachmentStore((s) => s.expandDrafts)
   const loadAttachments = useAttachmentStore((s) => s.loadAttachments)
   const ensureAttachment = useAttachmentStore((s) => s.ensureAttachment)
   const loadAttachmentDrafts = useAttachmentStore((s) => s.loadDrafts)
@@ -465,6 +469,17 @@ export function useDraftManager({
   const activeCurrentDraftId = editingAttachmentId
     ? currentAttachmentDraft?.id || ''
     : currentDraft?.id || ''
+  // 版本列表是否被截断（侧边栏/编辑页的 store 加载都带 limit）→ tab 栏显示「…」
+  const activeDraftsHasMore = editingAttachmentId
+    ? !!hasMoreByAttachment[editingAttachmentId]
+    : !!(selection && hasMoreByParagraph[selection.paragraphId])
+
+  /** 点「…」：拉该段落/附件的全部历史版本（用户主动展开，故一次拉全） */
+  const handleDraftsExpand = useCallback(() => {
+    if (!docId) return
+    if (editingAttachmentId) void expandAttachmentDrafts(docId, editingAttachmentId)
+    else if (selection) void expandDrafts(docId, selection.chapterId, selection.paragraphId)
+  }, [docId, editingAttachmentId, selection, expandDrafts, expandAttachmentDrafts])
 
   return {
     chapters, paragraphsByChapter, attachments, template,
@@ -472,7 +487,7 @@ export function useDraftManager({
     content, saving, dirty, setDirty,
     currentDraft, currentAttachment, currentAttachmentDraft,
     fullTextContent, chapterPreviewContent, reviewContext,
-    displayContent, activeDrafts, activeCurrentDraftId,
+    displayContent, activeDrafts, activeCurrentDraftId, activeDraftsHasMore, handleDraftsExpand,
     doSave, handleDraftSelect, handleDraftDelete, handleDraftsDelete, handleChange,
   }
 }

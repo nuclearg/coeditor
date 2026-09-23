@@ -60,7 +60,7 @@ export default function DocumentEditPage() {
     booting, contentLoading,
     content, saving, dirty, setDirty,
     reviewContext, displayContent,
-    activeDrafts, activeCurrentDraftId,
+    activeDrafts, activeCurrentDraftId, activeDraftsHasMore, handleDraftsExpand,
     doSave, handleDraftSelect, handleDraftDelete, handleDraftsDelete, handleChange,
   } = draftMgr
 
@@ -264,6 +264,8 @@ export default function DocumentEditPage() {
           editingAttachmentId={editingAttachmentId}
           editingAttachmentName={editingAttachmentName}
           activeDrafts={activeDrafts}
+          draftsHasMore={activeDraftsHasMore}
+          onExpandDrafts={handleDraftsExpand}
           activeCurrentDraftId={activeCurrentDraftId}
           onSelectDraft={handleSelectDraft}
           onDeleteDraft={handleDeleteDraft}

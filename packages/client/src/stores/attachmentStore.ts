@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { DRAFT_TAB_LIMIT, splitPage } from './paragraphDraftStore'
 import type { Attachment, AttachmentDraft, DocumentTemplate } from '@coeditor/shared'
 import { api } from '@/api/client'
 
@@ -16,6 +17,10 @@ interface AttachmentStore {
   loadAttachments: (docId: string) => Promise<void>
   ensureAttachment: (docId: string, type: string) => Promise<Attachment>
   loadDrafts: (docId: string, type: string) => Promise<void>
+  /** 该附件的版本列表是否被截断过（tab 栏据此显示「…」） */
+  hasMoreByAttachment: Record<string, boolean>
+  /** 展开该附件的全部版本（点「…」时调用） */
+  expandDrafts: (docId: string, type: string) => Promise<void>
   createDraft: (docId: string, type: string, content: string) => Promise<AttachmentDraft>
   switchDraft: (docId: string, type: string, draftId: string) => Promise<void>
   deleteDraft: (docId: string, type: string, draftId: string) => Promise<void>
@@ -26,6 +31,7 @@ export const useAttachmentStore = create<AttachmentStore>((set, get) => ({
   templates: [],
   attachments: {},
   draftsByAttachment: {},
+  hasMoreByAttachment: {},
 
   loadTemplates: async () => {
     if (get().templates.length > 0) return
@@ -42,7 +48,7 @@ export const useAttachmentStore = create<AttachmentStore>((set, get) => ({
 
   loadAttachments: async (docId) => {
     if (get().docId !== docId) {
-      set({ docId, attachments: {}, draftsByAttachment: {} })
+      set({ docId, attachments: {}, draftsByAttachment: {}, hasMoreByAttachment: {} })
     }
     try {
       const atts = await api.rpc<Attachment[]>('attachments.list', { docId })
@@ -82,12 +88,21 @@ export const useAttachmentStore = create<AttachmentStore>((set, get) => ({
     const existing = loadingAttDrafts.get(key)
     if (existing) return existing
     if (get().docId !== docId) {
-      set({ docId, attachments: {}, draftsByAttachment: {} })
+      set({ docId, attachments: {}, draftsByAttachment: {}, hasMoreByAttachment: {} })
     }
     const promise = (async () => {
       try {
-        const drafts = await api.rpc<AttachmentDraft[]>('attachmentDrafts.list', { docId, type })
-        set((s) => (s.docId === docId ? { draftsByAttachment: { ...s.draftsByAttachment, [type]: drafts } } : {}))
+        // 与段落草稿同款：默认只取最近 DRAFT_TAB_LIMIT 条（多取一条判断"还有更多"），
+        // 并识别服务端追加在末尾的"当前草稿"
+        const rows = await api.rpc<AttachmentDraft[]>('attachmentDrafts.list', {
+          docId, type, limit: DRAFT_TAB_LIMIT + 1,
+        })
+        const currentDraftId = get().attachments[type]?.currentDraftId || ''
+        const { drafts, hasMore } = splitPage(rows, DRAFT_TAB_LIMIT, currentDraftId)
+        set((s) => (s.docId === docId ? {
+          draftsByAttachment: { ...s.draftsByAttachment, [type]: drafts },
+          hasMoreByAttachment: { ...s.hasMoreByAttachment, [type]: hasMore },
+        } : {}))
       } catch (err) {
         console.error('[loadDrafts]', err)
         throw err
@@ -97,6 +112,15 @@ export const useAttachmentStore = create<AttachmentStore>((set, get) => ({
     })()
     loadingAttDrafts.set(key, promise)
     return promise
+  },
+
+  expandDrafts: async (docId, type) => {
+    // 不带 limit = 返回全部版本（用户主动点「…」触发）
+    const drafts = await api.rpc<AttachmentDraft[]>('attachmentDrafts.list', { docId, type })
+    set((s) => (s.docId === docId ? {
+      draftsByAttachment: { ...s.draftsByAttachment, [type]: drafts },
+      hasMoreByAttachment: { ...s.hasMoreByAttachment, [type]: false },
+    } : {}))
   },
 
   createDraft: async (docId, type, content) => {
