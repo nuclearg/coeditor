@@ -16,6 +16,12 @@
 #                           未置 1 时退化为「只查签名完整性」，便于未配 secrets 的 fork。
 #   AUTO_STAPLE_DMG=1       默认 1：.dmg 缺公证票据且提供了公证凭据时，显式补公证 + staple
 #   APPLE_API_KEY / APPLE_API_ISSUER / APPLE_API_KEY_PATH   公证凭据（补票时必需）
+#   ALLOW_UNNOTARIZED=1     允许「已签名但未公证/未 staple」的产物通过（快速通道用，
+#                           对应 tauri build --skip-stapling）。此时只把公证相关判据
+#                           （spctl 放行、stapler validate）降级为告警，签名完整性 /
+#                           Developer ID / hardened runtime 仍然强制；并强制不补票
+#                           （否则本脚本自己 notarytool submit --wait 会把时间等回去）。
+#                           ⚠️ 通过≠可分发：这种包只在联网时能被 Gatekeeper 放行。
 #
 # 退出码：0=全部通过；1=不达标（CI 应中断，禁止把包发出去）；2=用法错误
 #
@@ -25,6 +31,12 @@ set -euo pipefail
 TARGET="${1:-}"
 REQUIRE_DEVELOPER_ID="${REQUIRE_DEVELOPER_ID:-0}"
 AUTO_STAPLE_DMG="${AUTO_STAPLE_DMG:-1}"
+ALLOW_UNNOTARIZED="${ALLOW_UNNOTARIZED:-0}"
+
+# 快速通道下禁止本脚本自己补票：notarytool submit --wait 正是我们想避开的那段等待。
+if [[ "$ALLOW_UNNOTARIZED" == "1" ]]; then
+  AUTO_STAPLE_DMG=0
+fi
 
 if [[ -z "$TARGET" ]]; then
   echo "用法: bash scripts/verify-macos-dist.sh <path-to.app|path-to.dmg>" >&2
@@ -91,7 +103,12 @@ else
   codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | sed 's/^/    /' || true
 fi
 
-SEALED="$(codesign -dvvv "$APP" 2>&1 | grep -E '^Sealed Resources' || true)"
+# codesign 详情只取一次，后面复用。**不要**写成 `codesign -dvvv "$APP" | grep -q ...`：
+# grep -q 一命中就退出，codesign 写端被关会吃 SIGPIPE 返回 141，在 set -o pipefail 下
+# 整条管道判为失败，于是「明明有 runtime flag 也被判成没启用」。
+CODESIGN_INFO="$(codesign -dvvv "$APP" 2>&1 || true)"
+
+SEALED="$(printf '%s\n' "$CODESIGN_INFO" | grep -E '^Sealed Resources' || true)"
 if printf '%s' "$SEALED" | grep -q 'Sealed Resources=none'; then
   fail "资源未封存（$SEALED）——坏签名特征，用户侧会被内核 SIGKILL"
 else
@@ -101,8 +118,8 @@ fi
 # ---- 2) 签名主体：Developer ID ----
 log ""
 log "---- 2/4 签名主体 ----"
-AUTHORITIES="$(codesign -dvvv "$APP" 2>&1 | grep -E '^Authority=' || true)"
-TEAM="$(codesign -dvvv "$APP" 2>&1 | grep -E '^TeamIdentifier=' || true)"
+AUTHORITIES="$(printf '%s\n' "$CODESIGN_INFO" | grep -E '^Authority=' || true)"
+TEAM="$(printf '%s\n' "$CODESIGN_INFO" | grep -E '^TeamIdentifier=' || true)"
 log "    ${AUTHORITIES:-（无 Authority）}"
 log "    ${TEAM:-（无 TeamIdentifier）}"
 
@@ -115,7 +132,7 @@ else
 fi
 
 if printf '%s' "$AUTHORITIES" | grep -q 'Developer ID Application'; then
-  if codesign -dvvv "$APP" 2>&1 | grep -q 'flags=.*runtime'; then
+  if printf '%s\n' "$CODESIGN_INFO" | grep -q 'flags=.*runtime'; then
     log "✅ 已启用 hardened runtime"
   else
     fail "Developer ID 签名但未启用 hardened runtime（公证要求）"
@@ -129,6 +146,9 @@ SPCTL_OUT="$(spctl -a -vvv "$APP" 2>&1 || true)"
 if printf '%s' "$SPCTL_OUT" | grep -q 'accepted'; then
   log "✅ spctl 接受 .app"
   printf '%s\n' "$SPCTL_OUT" | sed 's/^/    /'
+elif [[ "$ALLOW_UNNOTARIZED" == "1" ]]; then
+  log "⚠️  spctl 未接受 .app（快速通道预期如此：已签名但未公证/未 staple）"
+  printf '%s\n' "$SPCTL_OUT" | sed 's/^/    /'
 elif [[ "$REQUIRE_DEVELOPER_ID" == "1" ]]; then
   fail "spctl 不接受 .app："
   printf '%s\n' "$SPCTL_OUT" | sed 's/^/    /'
@@ -141,6 +161,9 @@ log ""
 log "---- 4/4 公证票据 ----"
 if xcrun stapler validate "$APP" >/dev/null 2>&1; then
   log "✅ .app 票据已 staple"
+elif [[ "$ALLOW_UNNOTARIZED" == "1" ]]; then
+  log "⚠️  .app 未 staple 公证票据（快速通道预期如此；联网时 Gatekeeper 会去 Apple 核对）"
+  xcrun stapler validate "$APP" 2>&1 | sed 's/^/    /' || true
 elif [[ "$REQUIRE_DEVELOPER_ID" == "1" ]]; then
   fail ".app 未 staple 公证票据（用户首次离线打开仍会被拦）"
   xcrun stapler validate "$APP" 2>&1 | sed 's/^/    /' || true
@@ -157,7 +180,9 @@ if [[ "$KIND" == "dmg" ]]; then
     if [[ -n "${APPLE_API_KEY:-}" && -n "${APPLE_API_ISSUER:-}" && -n "${APPLE_API_KEY_PATH:-}" && -f "${APPLE_API_KEY_PATH:-}" ]]; then
       CAN_NOTARIZE=1
     fi
-    if [[ "$AUTO_STAPLE_DMG" == "1" && "$CAN_NOTARIZE" == "1" ]]; then
+    if [[ "$ALLOW_UNNOTARIZED" == "1" ]]; then
+      log "⚠️  .dmg 未 staple 公证票据（快速通道预期如此：打包不等公证）"
+    elif [[ "$AUTO_STAPLE_DMG" == "1" && "$CAN_NOTARIZE" == "1" ]]; then
       log "==> .dmg 无票据，显式补公证 + staple（notarytool submit --wait）"
       if xcrun notarytool submit "$DMG" \
             --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" \
@@ -179,6 +204,9 @@ if [[ "$KIND" == "dmg" ]]; then
   DMG_SPCTL="$(spctl -a -vvv -t open --context context:primary-signature "$DMG" 2>&1 || true)"
   if printf '%s' "$DMG_SPCTL" | grep -q 'accepted'; then
     log "✅ spctl 接受 .dmg"
+  elif [[ "$ALLOW_UNNOTARIZED" == "1" ]]; then
+    log "⚠️  spctl 未接受 .dmg（快速通道预期如此）"
+    printf '%s\n' "$DMG_SPCTL" | sed 's/^/    /'
   elif [[ "$REQUIRE_DEVELOPER_ID" == "1" ]]; then
     fail "spctl 不接受 .dmg："
     printf '%s\n' "$DMG_SPCTL" | sed 's/^/    /'
@@ -189,6 +217,19 @@ fi
 
 log ""
 if [[ "$FAILED" == "0" ]]; then
+  if [[ "$ALLOW_UNNOTARIZED" == "1" ]]; then
+    log "==> 结果: 签名达标，但**未公证/未 staple** ($TARGET)"
+    log ""
+    log "    ⚠️  这个包不能当正式分发包发出去："
+    log "        · 已用 Developer ID 签名 + hardened runtime（这部分已强制校验）"
+    log "        · 公证已上传 Apple，但本次没有等待结果、也没有 staple 票据"
+    log "        · 用户联网时 Gatekeeper 会去 Apple 核对，可能放行；离线一定打不开"
+    log "    补救（Apple 出结果后，票据可离线补）："
+    log "        xcrun notarytool log <id> --key ... --key-id ... --issuer ...   # 看是否 Accepted"
+    log "        xcrun stapler staple \"$TARGET\"                                 # 补票"
+    log "        bash scripts/verify-macos-dist.sh \"$TARGET\"                     # 再跑一次本闸门确认"
+    exit 0
+  fi
   log "==> 结果: 通过 ($TARGET)"
   exit 0
 fi
