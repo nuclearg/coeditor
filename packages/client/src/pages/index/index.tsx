@@ -192,12 +192,16 @@ export default function DocumentListPage() {
     await submitImport(title.trim(), tpl.id, text)
   }
 
-  // 首页面包屑 = 品牌名（main.head.left 默认实现渲染）
+  // 首页面包屑 = 品牌名（main.head.left 默认实现渲染）。
+  // 依赖要用**品牌名本身**，不能写 `t`：`t` 是模块级函数、`useT()` 也返回同一个函数
+  // （身份恒定，见 lib/i18n.ts），把 `t` 放进依赖数组等于永远不重跑 —— 切语言后面包屑会
+  // 一直停在旧语言（本组件已订阅 language，render 会重来，但 effect 不会）。
+  const brandName = t('brand.name')
   const setBreadcrumb = useLayoutStore((s) => s.setBreadcrumb)
   useEffect(() => {
-    setBreadcrumb(t('brand.name'))
+    setBreadcrumb(brandName)
     return () => setBreadcrumb('')
-  }, [setBreadcrumb, t])
+  }, [setBreadcrumb, brandName])
 
   // 导出单篇文档为 markdown（H5）：POST documents.export → blob → a.download。
   // 文件名优先取响应头 Content-Disposition，否则用文档标题。

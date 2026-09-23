@@ -5,7 +5,7 @@ import { LayoutShell } from '@/plugin/LayoutShell'
 import { SlotHost } from '@/plugin/SlotHost'
 import { getSettingsPageLabel } from '@/plugin'
 import { useLayoutStore } from '@/stores/layoutStore'
-import { t } from '@/lib/i18n'
+import { t, useT } from '@/lib/i18n'
 import { isWebView } from '@/lib/utils'
 
 /**
@@ -18,8 +18,17 @@ import { isWebView } from '@/lib/utils'
  * 离开页面恢复面包屑与 H5 默认标题（品牌名）。
  */
 export default function SettingsPage() {
-  // 惰性求值：settingsPageLabel 支持函数，语言切换后重读生效
+  /**
+   * 必须用 useT()（订阅语言）而不是模块级 t：本页有几处自己的文案（页脚版权、浏览器标签页、
+   * 小程序导航栏标题、面包屑），不订阅语言的话切语言后本组件根本不重渲染，它们会一直停在旧语言
+   * （实测：切成英文后标题仍是「个人中心」、页脚仍是「© 2026 校书郎」）。
+   */
+  const t = useT()
+  // settingsPageLabel 惰性求值：它支持函数，本组件因 useT() 会在切语言时重渲染，于是重读生效
   const title = getSettingsPageLabel()
+  // 面包屑 effect 的依赖用**文案本身**，不能用 `t`：t 的函数身份恒定（useT 也返回同一个），
+  // `[t]` 是死依赖 —— 那样即使组件重渲染了，effect 也不会重跑，面包屑照样停在旧语言
+  const brandName = t('brand.name')
 
   useEffect(() => {
     useLayoutStore.getState().setBreadcrumb(title)
@@ -32,10 +41,10 @@ export default function SettingsPage() {
       useLayoutStore.getState().setBreadcrumb('')
       // H5 返回后恢复默认标签页标题（品牌名）；小程序导航栏随页面栈自动
       if (isWebView() && typeof document !== 'undefined') {
-        document.title = t('brand.name')
+        document.title = brandName
       }
     }
-  }, [title, t])
+  }, [title, brandName])
 
   return (
     <LayoutShell
