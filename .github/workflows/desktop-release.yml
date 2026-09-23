@@ -109,6 +109,8 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          # 可选：显式指定签名身份（同一批证书里有多张 Developer ID 时用来消歧）
+          APPLE_SIGNING_IDENTITY_SECRET: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           set -euo pipefail
           if [ -z "${APPLE_CERTIFICATE:-}" ]; then
@@ -128,7 +130,11 @@ jobs:
           security find-identity -v -p codesigning build.keychain
           # 显式导出签名身份：它会**覆盖** tauri.conf.json 的 signingIdentity "-"，
           # 于是本地 ad-hoc 路径不受影响，而 CI 一定走 Developer ID。
-          IDENTITY="$(security find-identity -v -p codesigning build.keychain | awk -F'"' '/Developer ID Application/ {print $2; exit}')"
+          # 优先用 secrets 里显式指定的身份（多张证书时消歧），否则用刚导入的那张
+          IDENTITY="${APPLE_SIGNING_IDENTITY_SECRET:-}"
+          if [ -z "$IDENTITY" ]; then
+            IDENTITY="$(security find-identity -v -p codesigning build.keychain | awk -F'"' '/Developer ID Application/ {print $2; exit}')"
+          fi
           if [ -z "$IDENTITY" ]; then
             echo "::error::keychain 里没有 Developer ID Application 证书（.p12 是否只导出了证书、未含私钥？）"
             exit 1

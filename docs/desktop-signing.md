@@ -109,7 +109,7 @@ openssl base64 -A -in ~/Desktop/certificate.p12 -out /tmp/cert-base64.txt   # �
 |---|---|---|
 | `APPLE_CERTIFICATE` | `.p12` 的 base64（**单行**） | 2.3 的 `cert-base64.txt` |
 | `APPLE_CERTIFICATE_PASSWORD` | 导出 `.p12` 时设的密码 | 2.3 |
-| `APPLE_SIGNING_IDENTITY` | `Developer ID Application: <名字> (TEAMID)` | `security find-identity -v -p codesigning` 的引号内全文（2.2 装好后） |
+| `APPLE_SIGNING_IDENTITY` | `Developer ID Application: <名字> (TEAMID)` | `security find-identity -v -p codesigning` 的引号内全文（2.2 装好后）。**配了就优先用它**（多张 Developer ID 时用来消歧）；不配则由 CI 从导入的 `.p12` 自动推导 |
 | `KEYCHAIN_PASSWORD` | 随便一个强随机串（CI 临时钥匙串用，与 Apple 无关） | `openssl rand -hex 16` |
 | `APPLE_API_KEY` | Key ID（形如 `2X9R4HXF34`） | 2.5 |
 | `APPLE_API_ISSUER` | Issuer ID（UUID 形式） | 2.5 |

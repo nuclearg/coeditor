@@ -8,6 +8,9 @@ on:
       - main
     paths-ignore:
       - 'docs/**'
+  # 支持手动触发：Actions → Desktop macOS preview → Run workflow
+  # （只想验证一次 macOS 打包/签名时用它，不必推提交；release workflow 则会连带出 Windows/Linux）
+  workflow_dispatch:
 
 jobs:
   macos:
@@ -77,6 +80,8 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          # 可选：显式指定签名身份（同一批证书里有多张 Developer ID 时用来消歧）
+          APPLE_SIGNING_IDENTITY_SECRET: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           set -euo pipefail
           if [ -z "${APPLE_CERTIFICATE:-}" ]; then
@@ -94,7 +99,11 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain >/dev/null
           rm -f "$RUNNER_TEMP/certificate.p12"
           security find-identity -v -p codesigning build.keychain
-          IDENTITY="$(security find-identity -v -p codesigning build.keychain | awk -F'"' '/Developer ID Application/ {print $2; exit}')"
+          # 优先用 secrets 里显式指定的身份（多张证书时消歧），否则用刚导入的那张
+          IDENTITY="${APPLE_SIGNING_IDENTITY_SECRET:-}"
+          if [ -z "$IDENTITY" ]; then
+            IDENTITY="$(security find-identity -v -p codesigning build.keychain | awk -F'"' '/Developer ID Application/ {print $2; exit}')"
+          fi
           if [ -z "$IDENTITY" ]; then
             echo "::error::keychain 里没有 Developer ID Application 证书（.p12 是否只导出了证书、未含私钥？）"
             exit 1
