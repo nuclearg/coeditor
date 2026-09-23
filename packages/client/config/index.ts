@@ -11,6 +11,24 @@ const pluginExtraIncludes: string[] = (process.env.PLUGIN_EXTRA_INCLUDE || '')
   .map((p) => p.trim())
   .filter(Boolean)
 
+/**
+ * 深合并宿主注入的配置（见文件末尾 TARO_CONFIG_EXTEND）。
+ *
+ * 只对**纯对象**递归：数组、函数、类实例一律整体替换——Taro 配置里的 webpackChain 是函数、
+ * copy.patterns 是数组，它们"合并"没有语义，替换才对。
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function deepMerge(target: any, source: any): void {
+  if (!source || typeof source !== 'object') return
+  for (const [key, value] of Object.entries(source)) {
+    if (value && typeof value === 'object' && !Array.isArray(value) && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+      deepMerge(target[key], value)
+    } else {
+      target[key] = value
+    }
+  }
+}
+
 // Taro 的 compile.include 未稳定传递到 script rule，这里在 webpackChain 中
 // 直接把 shared 源码目录加进 babel-loader 的 include，双端共用。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,9 +79,6 @@ export default defineConfig(async () => {
         // 浏览器 favicon：构建时原样复制到 dist-h5 根目录（index.html 中按 /favicon.* 引用）
         { from: 'src/favicon.ico', to: 'dist-h5/favicon.ico' },
         { from: 'src/favicon.png', to: 'dist-h5/favicon.png' },
-        // 小程序 darkmode 变量表：必须与 app.json 同级（app.json 的 themeLocation 指向它）。
-        // Taro 不会自动复制，缺了它开启 darkmode 的小程序取不到变量，导航栏会回落成静态白底。
-        { from: 'src/theme.json', to: 'dist-weapp/theme.json' },
       ],
       options: {},
     },
@@ -88,8 +103,12 @@ export default defineConfig(async () => {
         : path.resolve(__dirname, '..', 'src/plugin/registry.ts'),
     },
     // outputRoot 在平台子配置中运行时生效，但类型定义缺失，故用 spread 携带
+    //
+    // 这里**只留平台中立的部分**：webpackChain 是"把 shared 源码与宿主注入的插件目录
+    // 纳入 babel-loader"的钩子，H5 侧有一份一模一样的（见下面 h5.webpackChain）。
+    // 小程序**特有的**构建配置（产物目录 dist-weapp、mini 的 postcss 等）不在这里：
+    // 基座只用 Taro 框架、不产出小程序包，那些由宿主经 TARO_CONFIG_EXTEND 注入（见文件末尾）。
     mini: {
-      ...({ outputRoot: 'dist-weapp' }),
       webpackChain(chain) {
         includeSharedSrc(chain)
         // 注意：这里**不要**为 react-dom 设置任何 alias。
@@ -98,19 +117,6 @@ export default defineConfig(async () => {
         // 一旦覆盖成真实包路径或 false：前者会把 react-dom 拽进产物并在运行时抛
         // "Right-hand side of 'instanceof' is not an object"（其 host config 访问
         // window.HTMLIFrameElement）；后者会连 Taro 的 React 渲染器一起删掉。
-      },
-      postcss: {
-        pxtransform: {
-          enable: true,
-          config: {},
-        },
-        cssModules: {
-          enable: false,
-          config: {
-            namingPattern: 'module',
-            generateScopedName: '[name]__[local]___[hash:base64:5]',
-          },
-        },
       },
     },
     h5: {
@@ -153,6 +159,27 @@ export default defineConfig(async () => {
         },
       },
     },
+  }
+
+  // ===== 宿主注入的额外 Taro 配置（平台中性的扩展点）=====
+  //
+  // `TARO_CONFIG_EXTEND` 指向一个模块的绝对路径（.js / .cjs，CommonJS），其导出对象会被
+  // **深合并**进上面的 baseConfig（同键后者覆盖，纯对象递归合并）。
+  //
+  // 为什么需要它：基座只用 Taro 框架、**不产出小程序包**，所以小程序特有的构建配置
+  // （产物目录 dist-weapp、mini 的 postcss 等）不应该长在基座里。Taro 4.2 没有 `--config`
+  // 之类的"换配置文件"开关（`taro build --help` 可证），宿主无法自带一份配置，于是这里留一个
+  // 注入点：由宿主（coeditor-saas 的 build.sh）在构建小程序时注入。
+  // 与既有注入点同一套思路：PLUGIN_REGISTRY_PATH / PLUGIN_EXTRA_INCLUDE / API_BASE_URL。
+  //
+  // 深合并的意义：宿主只写它要补的键（如 `mini.outputRoot`），不会把基座的
+  // `mini.webpackChain`（includeSharedSrc）整块顶掉——那是"把 shared 源码与宿主插件目录
+  // 纳入 babel-loader"的必需钩子，被顶掉会直接编译失败。
+  const extendPath = process.env.TARO_CONFIG_EXTEND
+  if (extendPath) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const injected = require(path.resolve(extendPath))
+    deepMerge(baseConfig, injected?.default ?? injected)
   }
 
   // 开发与生产构建共用同一份配置，无按环境覆盖项。
