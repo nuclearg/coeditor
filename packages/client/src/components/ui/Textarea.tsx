@@ -13,6 +13,12 @@ interface TextareaProps {
    * 调用处可按场景覆盖（AI 输入 50000 / 段落 100000 / 附件 200000）。
    */
   maxLength?: number
+  /**
+   * 去掉 iOS 原生 textarea 的默认内边距（仅小程序端有意义；H5 走 DOM textarea，无此问题）。
+   * 需要「固定高度恰好等于某个设计尺寸」时打开它——否则 iOS 自带内边距会吃掉可用高度，
+   * 把单行文字挤到裁切（见 AiPanel 的 aiInputStyle）。
+   */
+  disableDefaultPadding?: boolean
   onChange?: (value: string) => void
   onEnter?: (withShift: boolean) => void
   className?: string
@@ -25,6 +31,7 @@ export function Textarea({
   disabled,
   autoHeight,
   maxLength = 200000,
+  disableDefaultPadding,
   onChange,
   onEnter,
   className,
@@ -61,6 +68,7 @@ export function Textarea({
       disabled={disabled}
       autoHeight={autoHeight}
       maxlength={maxLength}
+      disableDefaultPadding={disableDefaultPadding}
       style={style}
       onInput={(e) => onChange?.(e.detail.value)}
       onConfirm={isWebView() ? undefined : () => onEnter?.(false)}

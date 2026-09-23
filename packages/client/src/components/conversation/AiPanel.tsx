@@ -566,6 +566,30 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
   const isMobile = useIsMobile()
 
   // === aipanel.foot 默认实现（输入/发送；受控协议在 aiInputStore） ===
+  /**
+   * AI 输入框尺寸：折叠态与同行发送按钮等高（`.btn` = 76rpx = 38 设计 px），
+   * H5 再随内容长高到 5 行（max-height 120）后内部滚动。
+   *
+   * 两端数值**一律过 designPx**：内联 style 不过 pxtransform，小程序会把裸数字当
+   * **物理像素**——小程序分支此前写的是 `{ height: 60, minHeight: 60 }`，即 60 物理像素，
+   * 比旁边 76rpx（≈38px）的发送按钮高出近六成，这正是「小程序里输入框比按钮高一大截」
+   * 的根因（详见 lib/utils.ts 里 designPx 的注释）。
+   *
+   * 小程序端固定成一行高、**不**开 autoHeight：原生 textarea 的 auto-height 只会按内容
+   * 无限长高、没有 max-height（H5 是靠 field-sizing + max-height 才收得住的），会把面板
+   * 顶破；多行内容在小程序里由 textarea 自身滚动。
+   * 垂直 padding 取 6 设计 px（与 H5 同值）：76rpx − 12rpx×2 − 2rpx 边框 ≈ 50rpx，
+   * 正好容下一行行高（.textarea 28rpx × 1.7 ≈ 47.6rpx），文字视觉居中。
+   */
+  const aiInputStyle: React.CSSProperties = {
+    minHeight: designPx(38),
+    maxHeight: designPx(120),
+    padding: `${designPx(6)} ${designPx(10)}`,
+    boxSizing: 'border-box',
+    // 小程序：固定一行高（与发送按钮一致）；H5：不锁 height，交给 field-sizing 自然长高
+    ...(isWebView() ? {} : { height: designPx(38) }),
+  }
+
   const renderInput = () => {
     // 用 render 期算好的 inputPlaceholder，**不要**读 useAiInputStore.getState().placeholder：
     // 那是给插件替换实现用的副本，写它的 effect 在 render 之后才跑，读回来必然慢一拍（见上方注释）
@@ -574,11 +598,10 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
         <Textarea
           autoHeight={isWebView()}
           className={cn('text-sm resize-none', isWebView() && 'ai-panel-input')}
-          // H5：不锁固定高度（会挡住内部自动长高），用 minHeight + maxHeight——
-          // 内部 textarea 靠 field-sizing/autoHeight 随输入自然长高，达 ~5 行（max-height 120px）后内部滚动
-          style={isWebView()
-            ? { minHeight: 38, maxHeight: 120, padding: '6px 10px', boxSizing: 'border-box' }
-            : { height: 60, minHeight: 60 }}
+          // iOS 原生 textarea 自带内边距，会吃掉这 38 设计 px 里的可用高度、把单行文字挤到裁切；
+          // 关掉它，让上面显式 padding 说了算（H5 用 DOM textarea，无此 prop，故传 undefined 不落属性）
+          disableDefaultPadding={isWebView() ? undefined : true}
+          style={aiInputStyle}
           placeholder={inputPlaceholder}
           value={input}
           onChange={setInput}
