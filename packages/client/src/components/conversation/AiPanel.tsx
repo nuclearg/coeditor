@@ -425,12 +425,29 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
     }
   }
 
-  // 注册发送/中止实现到 aiInputStore（插件替换输入框/发送按钮时共用协议）
+  /**
+   * 输入框占位文案：随「是否选中了段落」在审阅/提问两套文案间切换。
+   *
+   * **必须在 render 里算、并直接交给下面的 <Textarea> 用**，不要再从 store 里读回来。
+   * 早先的写法是：这里 setPlaceholder 写进 aiInputStore，renderInput 里
+   * `useAiInputStore.getState().placeholder` 读出来——于是永远**慢一拍**：
+   * effect 在 render **之后**才写，而 render 期读到的还是上一轮的值，且写 store 不会触发
+   * 本组件重渲染（本组件只订阅了 input，没订阅 placeholder），所以那一拍的 stale 会一直挂着。
+   * 现象就是切语言后输入框仍是上一轮语言的文案：中文 → 英文 → 中文 之后中英正好是反的。
+   *
+   * store 里那份仍然写（见下），但只服务于「插件替换掉输入框」的共用协议
+   * （aipanel.foot.middle/right 的替换实现），默认实现不再依赖它。
+   */
   const inputPlaceholder = selection ? t('ai.reviewPlaceholder') : t('ai.questionPlaceholder')
+  // 注册发送/中止实现到 aiInputStore（插件替换输入框/发送按钮时共用协议）。
+  // 没有依赖数组是**有意的**：handleSend/handleAbort 闭包了最新的会话/流状态，每次 render 都要重新注册。
   useEffect(() => {
     useAiInputStore.getState().registerControls({ send: handleSend, abort: handleAbort })
-    useAiInputStore.getState().setPlaceholder(inputPlaceholder)
   })
+  // 占位文案的 store 副本：只在真的变了的时候写（写它不会引起本组件重渲染，不会成环）
+  useEffect(() => {
+    useAiInputStore.getState().setPlaceholder(inputPlaceholder)
+  }, [inputPlaceholder])
 
   // Auto-submit on AI review button click
   const autoSubmitLock = useRef(false)
@@ -550,7 +567,8 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
 
   // === aipanel.foot 默认实现（输入/发送；受控协议在 aiInputStore） ===
   const renderInput = () => {
-    const placeholder = useAiInputStore.getState().placeholder
+    // 用 render 期算好的 inputPlaceholder，**不要**读 useAiInputStore.getState().placeholder：
+    // 那是给插件替换实现用的副本，写它的 effect 在 render 之后才跑，读回来必然慢一拍（见上方注释）
     return (
       <View className="flex-1">
         <Textarea
@@ -561,7 +579,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           style={isWebView()
             ? { minHeight: 38, maxHeight: 120, padding: '6px 10px', boxSizing: 'border-box' }
             : { height: 60, minHeight: 60 }}
-          placeholder={placeholder}
+          placeholder={inputPlaceholder}
           value={input}
           onChange={setInput}
           onEnter={handleSend}
