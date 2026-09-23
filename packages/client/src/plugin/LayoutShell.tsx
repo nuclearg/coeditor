@@ -6,6 +6,7 @@ import { ToastHost } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
 import { SettingsMenu } from '@/components/settings/SettingsMenu'
 import { SlotHost } from '@/plugin/SlotHost'
+import { SHELL_BARS_HIDDEN_VARIANTS, shellHeadVisible } from '@/plugin/shell-bars'
 import { useLayoutStore, type PageVariant } from '@/stores/layoutStore'
 import { useTheme } from '@/stores/theme'
 import { useIsMobile } from '@/hooks'
@@ -22,20 +23,6 @@ import logo from '@/assets/logo.png'
  * 屏幕，展开后再也收不回去。designPx 让小程序输出 520rpx（≈视口 2/3），与 H5 等宽。
  */
 const SIDEBAR_WIDTH = 260
-
-/**
- * 小程序端**不渲染外壳自带吊顶/吊底**的页面形态。
- *
- * 手机上有原生导航栏（标题+胶囊），再叠一条自绘顶栏/底栏属于冗余。首页与个人中心
- * 都是"内容即页面"的整页形态，故一并隐藏；编辑页不在列内——它的吊顶承载面包屑
- * （"文档 - 章节 - 段落"）。H5/桌面一律不受影响。
- *
- * 副作用（已知并接受）：吊顶右侧的齿轮设置入口随之消失。小程序上仍有入口——编辑页
- * 与扩展页(custom) 保留外壳栏，齿轮在那里。若日后个人中心需要就地改语言/审阅风格，
- * 应把这些项放进账户页自身（见 coeditor-saas 的 plugins/shared/account.tsx 的 tab 区），
- * 而不是恢复吊顶。
- */
-const SHELL_BARS_HIDDEN_VARIANTS: PageVariant[] = ['home', 'settings']
 
 /**
  * 页面骨架（三端一致，docs/plugin.md §3/§6）：
@@ -75,6 +62,9 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
   const isMobile = useIsMobile()
 
   const hideShellBars = !isWebView() && SHELL_BARS_HIDDEN_VARIANTS.includes(variant)
+  // 吊顶是否渲染与 hideShellBars 不同：小程序首页要顶栏（logo/公告/设置），只是不要吊底
+  const showShellHead = shellHeadVisible(variant, isWebView())
+  const isWeappHome = !isWebView() && variant === 'home'
   // 调色板挂在下面这个根元素上（见 app.scss「调色板的挂载点」）：小程序没有 App 组件层，
   // app.tsx 的 .app 不进页面树，只有 LayoutShell 的根元素是每页都存在的挂载点。
   const theme = useTheme((s) => s.theme)
@@ -191,6 +181,15 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
             </View>
           )}
         </>
+      ) : isWeappHome ? (
+        /**
+         * 小程序首页：**只放 logo，不放文字**。
+         * 原生导航栏已经显示了页面标题（"校书郎"），这一行再写一遍品牌名就是重复；
+         * 公告在中间、设置在右侧（见下方 main.head.middle / main.head.right）。
+         */
+        <View className="flex items-center shrink-0" style={{ paddingLeft: designPx(12) }}>
+          <Image src={logo} mode="aspectFit" style={{ width: designPx(24), height: designPx(24) }} />
+        </View>
       ) : (
         <View
           className="flex items-center gap-2 font-semibold shrink-0"
@@ -260,8 +259,9 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
           slot="main"
           defaults={
         <View className="flex-1 flex flex-col" style={{ minWidth: 0, minHeight: 0 }} onClick={isMobile ? () => useLayoutStore.getState().setSidebarOpen(false) : undefined}>
-          {/* main.head：左=面包屑(+收起态 logo) / 中 / 右（固定高度，无边框） */}
-          {!hideShellBars && (
+          {/* main.head：左=logo/面包屑 / 中=公告（插件） / 右=设置齿轮
+              （小程序首页也渲染这一条：原生导航栏只提供标题与胶囊，放不下 logo） */}
+          {showShellHead && (
           <SlotHost
             slot="main.head"
             defaults={
