@@ -203,6 +203,14 @@ cd desktop && npx tauri build --bundles app
   导出后务必用 2.3 的 `openssl pkcs12 -info` 确认有 `Shrouded Keybag`，否则 CI 会报找不到身份。
 - **`base64` 带换行**：一定加 `-A`（单行），否则 GitHub Secret 里塞进换行会解码失败。
 - **公证被拒**：多为 hardened runtime 下缺权限或签名不完整。用第 7 节的 `notarytool log` 看具体条目；`.p8` 只能下载一次，丢了要重新建 Key。
+- **找不到 Issuer ID，或看到的只是 10 位串**：Issuer ID 是 **UUID 形式**
+  （形如 `69a6de7b-5b0d-47e3-e053-5b8c7c11a4d1`），显示在 Integrations → App Store Connect API
+  页**表格上方**，不是某一行的字段；行里那个 10 位的是 **Key ID**（也就是 `.p8` 文件名
+  `AuthKey_<KeyID>.p8` 里的那一段）。它属于**团队**，所以同团队所有 Key 共用同一个 Issuer ID。
+- **必须建 Team Key**：Individual Key 没有 Issuer ID，而 Tauri 只要用了 API Key 就必传
+  `--issuer`，拿 Individual Key 会直接失败。建错了就删掉重建 Team Key。
+- **公证报 `A required agreement is missing or has expired`（403）**：账号里有待接受的协议。
+  让 Account Holder 去 App Store Connect → 「协议、税务和银行业务」接受后重试。
 - **`APPLE_SIGNING_IDENTITY` 必须与证书完全一致**（含括号里的 Team ID），差一个字符就会回落到 ad-hoc。
 - **多个团队**：Apple ID 属于多个团队时需设 `APPLE_PROVIDER_SHORT_NAME`（`APPLE_TEAM_ID` 的补充项）。
 - **DMG 图标位置/大小在 CI 上不生效**：Tauri 已知问题 [tauri#1731](https://github.com/tauri-apps/tauri/issues/1731)，与本链路无关。
