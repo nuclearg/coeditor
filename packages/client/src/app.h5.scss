@@ -171,6 +171,18 @@ html,
   margin-bottom: 12px;
 }
 
+// ===== 轻提示（toast）=====
+// app.scss 里是**小程序尺度**（design px，1px→1rpx），H5 用物理像素，故这里覆盖成一半左右
+.toast-host {
+  padding: 0 40px;
+}
+
+.toast-panel {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
 // ===== 侧滑面板 =====
 .sheet-panel {
   width: 300px;

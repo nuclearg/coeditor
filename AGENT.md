@@ -18,6 +18,7 @@
 - `@coeditor/shared` 在构建时 alias 直接指向 `packages/shared/src/types.ts`（单一来源，无副本）；Taro 的 `compile.include` 不生效，改由 `config/index.ts` 的 `webpackChain`（`includeSharedSrc`）把 shared 源码目录加进 babel-loader 的 include
 - 构建：`build:h5`（产物 dist-h5）。**开源版不产出小程序包**：`build:weapp` / `dev:weapp` 脚本与 `project.config.json`（含微信 appid）均不在本仓库。微信小程序由 SaaS 宿主（coeditor-saas，以 git submodule 引用本仓库源码）自行驱动 `taro build --type weapp`，appid 由 SaaS 侧提供；源码中的双端分支与 `@tarojs/plugin-platform-weapp` 依赖即为此保留（Taro 本身不读 `project.config.json`，该文件仅供微信开发者工具使用）
 - 后端地址约定：前端始终用相对路径 `/api/*`，由部署方保证同域或反代，不做编译时注入
+- **弹层一律自绘，不用 Taro 自带的**：`Taro.showToast / showLoading / showModal / showActionSheet` 的配色写死在框架里（H5 端 Taro 自绘：弹窗 `#FFFFFF` + 确定按钮 `#3CC51F` 微信绿、动作面板 `#EFEFF4`；小程序端走 `wx.*` 原生白底），既不读 `_palette.scss` 的 CSS 变量、也跟不上设置里的手动日/夜切换。轻提示用 `lib/toast.ts`（状态）+ `LayoutShell` 里的 `<ToastHost />`（渲染），确认框用 `components/ui/Confirm.tsx` 的 `useConfirm()`，复制用 `lib/clipboard.ts`（`Taro.setClipboardData` 在 H5 端**内置**一次写死的"内容已复制"原生 toast，会与主题化提示叠两层）；系统能力弹层（目录选择器、收银台、分享）保留原生——那是系统界面，替换不了也不该替换
 
 ## 前端插件机制（v2）
 

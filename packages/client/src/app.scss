@@ -516,6 +516,49 @@ page {
 // 卡片内最后一个分区不留底部间距
 // （选择器 `> :last-child` 不被 WXSS 解析器接受，规则已移至 app.h5.scss，仅 H5 生效）
 
+// ===== 轻提示（toast）=====
+// 宿主铺满全屏但**不吃点击**（指针事件透传给下层）：提示不该拦住用户操作。
+// z-index 取 1300：要能盖在对话框遮罩(1000)与"AI 导入中"遮罩(1100)之上——
+// 恰恰是弹窗开着时弹出来的那条提示最需要被看见。
+// 配色全走调色板（--popover / --destructive），因此自动跟随日/夜间；见 lib/toast.ts。
+.toast-host {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 80px;
+  box-sizing: border-box;
+}
+
+.toast-panel {
+  max-width: 100%;
+  padding: 24px 32px;
+  border-radius: 16px;
+  background: var(--popover);
+  color: var(--popover-fg);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 28px;
+  line-height: 1.5;
+  text-align: center;
+  word-break: break-word;
+  animation: toast-in 0.15s ease-out;
+}
+
+// 失败提示：文字与描边走破坏色（夜间由调色板换成亮一档的值）
+.toast-error {
+  color: var(--destructive);
+  border-color: var(--destructive);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
 // ===== 设置页小下拉（AI 接口配置的提供商/模型选择，跨端自绘） =====
 .sel {
   width: 100%;

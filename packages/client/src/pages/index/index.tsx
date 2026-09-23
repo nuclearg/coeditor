@@ -10,6 +10,7 @@ import { Markdown } from '@/components/markdown/Markdown'
 import { useDocumentStore, useLayoutStore, useAttachmentStore } from '@/stores'
 import { bus } from '@/plugin/bus'
 import { t, localize } from '@/lib/i18n'
+import { showErrorToast, showToast } from '@/lib/toast'
 import { cn, isWebView } from '@/lib/utils'
 import { useI18nStore } from '@/stores/i18nStore'
 import { api } from '@/api/client'
@@ -80,7 +81,7 @@ export default function DocumentListPage() {
   /** 导入前置校验（双保险：按钮已按 canImport 禁用，这里防程序化触发/弹窗内触发） */
   const requireImportPrereq = (): DocumentTemplate | null => {
     if (!selectedTemplate || !title.trim()) {
-      Taro.showToast({ title: t('home.importPrereq'), icon: 'none' })
+      showToast(t('home.importPrereq'))
       return null
     }
     return selectedTemplate
@@ -121,7 +122,7 @@ export default function DocumentListPage() {
       await updateDocument(renameTarget.id, { title: renameTitle.trim() })
       setRenameTarget(null)
     } catch (err) {
-      Taro.showToast({ title: err instanceof Error ? err.message : t('common.renameFailed'), icon: 'none' })
+      showErrorToast(err instanceof Error ? err.message : t('common.renameFailed'))
     }
   }
 
@@ -136,7 +137,7 @@ export default function DocumentListPage() {
       })
       Taro.navigateTo({ url: `/pages/edit/index?docId=${doc.id}` })
     } catch (err) {
-      Taro.showToast({ title: err instanceof Error ? err.message : t('home.importFailed'), icon: 'none' })
+      showErrorToast(err instanceof Error ? err.message : t('home.importFailed'))
     } finally {
       setImporting(false)
     }
@@ -162,11 +163,11 @@ export default function DocumentListPage() {
       void (async () => {
         const text = await file.text().catch(() => '')
         if (text.length === 0) {
-          Taro.showToast({ title: t('home.importFailed'), icon: 'none' })
+          showErrorToast(t('home.importFailed'))
           return
         }
         if (text.length > MAX_IMPORT_CHARS) {
-          Taro.showToast({ title: t('home.importTooLarge'), icon: 'none' })
+          showToast(t('home.importTooLarge'))
           return
         }
         await submitImport(title.trim(), tpl.id, text)
@@ -183,7 +184,7 @@ export default function DocumentListPage() {
     const text = textContent.trim()
     if (!text) return
     if (text.length > MAX_IMPORT_CHARS) {
-      Taro.showToast({ title: t('home.importTooLarge'), icon: 'none' })
+      showToast(t('home.importTooLarge'))
       return
     }
     setTextImportOpen(false)
@@ -230,7 +231,7 @@ export default function DocumentListPage() {
       a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : t('home.exportFailed'), icon: 'none' })
+      showErrorToast(e instanceof Error ? e.message : t('home.exportFailed'))
     } finally {
       setExportingDoc(null)
     }

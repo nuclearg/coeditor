@@ -2,6 +2,7 @@ import { Image, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ResizablePanel } from '@/components/ui/Resizable'
+import { ToastHost } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
 import { SettingsMenu } from '@/components/settings/SettingsMenu'
 import { SlotHost } from '@/plugin/SlotHost'
@@ -338,6 +339,9 @@ export function LayoutShell({ variant, sidebar, editor, ai, content, footer, chi
       </View>
 
       {children}
+
+      {/* 轻提示宿主：挂骨架根（每页都渲染）而不是 app.tsx 的 root 插槽——见 components/ui/Toast.tsx */}
+      <ToastHost />
     </View>
   )
 }

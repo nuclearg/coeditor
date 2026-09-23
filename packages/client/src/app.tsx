@@ -5,6 +5,7 @@ import { runInit, mergePluginDictionaries, getPlugins } from '@/plugin'
 import { SlotHost } from '@/plugin/SlotHost'
 import { subscribeSystemTheme, useTheme } from '@/stores/theme'
 import { cn, isWebView } from '@/lib/utils'
+import { showErrorToast } from '@/lib/toast'
 import { t } from '@/lib/i18n'
 
 // H5 端使用 web 尺寸覆盖层（小程序保留移动端尺寸）
@@ -58,7 +59,9 @@ class ErrorBoundary extends Component<PropsWithChildren, ErrorBoundaryState> {
 }
 
 function App({ children }: PropsWithChildren) {
-  // 全局未捕获 rejection 兜底：弹 toast + 打日志，双端覆盖
+  // 全局未捕获 rejection 兜底：弹主题化提示 + 打日志，双端覆盖。
+  // 提示走 lib/toast.ts（由 LayoutShell 里的 <ToastHost /> 渲染），不用 Taro.showToast：
+  // 后者小程序端是原生白底、H5 端是 Taro 自绘的深色块，都不吃我们的调色板。
   useEffect(() => {
     const shouldSuppress = (reason: unknown) =>
       reason instanceof Error && reason.name === 'PluginHandled'
@@ -69,7 +72,7 @@ function App({ children }: PropsWithChildren) {
         if (shouldSuppress(e.reason)) return
         const msg = e.reason instanceof Error ? e.reason.message : String(e.reason)
         console.error('[unhandled]', e.reason)
-        Taro.showToast({ title: msg || t('error.operationFailed'), icon: 'none', duration: 3000 })
+        showErrorToast(msg || t('error.operationFailed'))
       }
       window.addEventListener('unhandledrejection', handler)
       return () => window.removeEventListener('unhandledrejection', handler)
@@ -79,7 +82,7 @@ function App({ children }: PropsWithChildren) {
         if (shouldSuppress(res.reason)) return
         const msg = res.reason instanceof Error ? res.reason.message : String(res.reason)
         console.error('[unhandled]', res.reason)
-        Taro.showToast({ title: msg || t('error.operationFailed'), icon: 'none', duration: 3000 })
+        showErrorToast(msg || t('error.operationFailed'))
       }
       Taro.onUnhandledRejection?.(handler)
       return () => { Taro.offUnhandledRejection?.(handler) }

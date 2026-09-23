@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { useT } from '@/lib/i18n'
+import { showErrorToast } from '@/lib/toast'
 import { api, buildHeaders } from '@/api/client'
 import type { AppSettings } from '@coeditor/shared'
 import { cn, isWebView } from '@/lib/utils'
@@ -279,7 +280,7 @@ export function ApiConfigSection() {
       savedTimerRef.current = setTimeout(() => setSaved(false), 2000)
     } catch (err) {
       console.error('[saveSettings]', err)
-      Taro.showToast({ title: t('error.saveFailed'), icon: 'none' })
+      showErrorToast(t('error.saveFailed'))
     }
   }
 
