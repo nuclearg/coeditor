@@ -164,6 +164,8 @@ jobs:
       # beforeBuildCommand（build-desktop.sh）会自行构建 H5 + bun 编译 sidecar。
       # macOS：tauri-action 负责 tauri build（签名 → 公证 .app → staple）+ 上传产物到 Release
       - name: Build & upload (macOS)
+        # 公证要等 Apple 排队（首次可能数小时）；给步骤设上限，避免白占 job 6 小时
+        timeout-minutes: 45
         if: matrix.platform != 'windows-latest'
         uses: tauri-apps/tauri-action@v0
         env:

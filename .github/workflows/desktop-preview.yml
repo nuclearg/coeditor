@@ -131,6 +131,8 @@ jobs:
 
       # 无 tag：只构建（beforeBuildCommand 自产 H5 + sidecar），不发布
       - name: Build dmg
+        # 公证要等 Apple 排队（首次可能数小时）；给步骤设上限，避免白占 job 6 小时
+        timeout-minutes: 45
         uses: tauri-apps/tauri-action@v0
         env:
           # Apple 相关变量由前序步骤按「有值才写」注入 GITHUB_ENV，
