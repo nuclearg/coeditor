@@ -139,6 +139,37 @@ openssl base64 -A -in ~/Downloads/AuthKey_XXXXXXXXXX.p8 -out /tmp/p8-base64.txt
    - **`.dmg` 若无票据 → 显式 `notarytool submit --wait` + `stapler staple` 后复验**
      这一条是刻意的：Tauri 是否给 dmg 自动公证随版本而异，闸门不依赖该行为。
 
+### 4.1 两条通道：等公证 vs 不等公证
+
+首次公证 Apple 可能排队**数小时**（Tauri 维护者原话 "first time notarization can
+sometimes take days"）。所以「打包+签名」和「等公证」必须能解耦，否则步骤超时必然把
+正常的签名结果一起丢掉。
+
+`Desktop macOS preview` 支持手动触发一个开关：
+
+| 触发方式 | `--skip-stapling` | 闸门 | 产物 | 用途 |
+|---|---|---|---|---|
+| push main（默认） | 否 | 严格 | 已签名 + 已公证 + 已 staple | 正式分发 |
+| Run workflow，勾选 `skip_stapling` | 是 | 快速通道 | 已签名，**未**公证/未 staple | 几分钟拿到包做冒烟验证 |
+
+勾选后发生的事：
+
+- `tauri build --skip-stapling`：**仍然会上传公证**（`notarytool submit`，不带 `--wait`），
+  日志里会打印 `Submitted with status Pending for id <id>`；只是不等待、也不 staple。
+- 闸门以 `ALLOW_UNNOTARIZED=1` 运行：把 **`spctl` 放行**与 **`stapler validate`** 两条
+  降级为告警，其余（签名完整性 / Developer ID / hardened runtime）**照旧强制**；
+  同时强制 `AUTO_STAPLE_DMG=0`，避免闸门自己又去 `notarytool submit --wait` 把时间等回来。
+- 产物名带 `-signed-unnotarized` 后缀，结尾也会打印一段「不要直接分发」的警告。
+
+> ⚠️ 快速通道的包**不可直接分发**：没有 staple 票据时，Gatekeeper 需要联网去 Apple
+> 核对。Apple 那边 `Accepted` 之后，同一个包联网能开、离线打不开；补票即可修好：
+>
+> ```bash
+> xcrun notarytool log <id> --key AuthKey_XXX.p8 --key-id XXX --issuer <issuer-uuid>   # 看结果
+> xcrun stapler staple dist/CoEditor.dmg                                              # 补票
+> bash desktop/scripts/verify-macos-dist.sh dist/CoEditor.dmg                          # 复验（不带 ALLOW_UNNOTARIZED）
+> ```
+
 ## 5. entitlements：ad-hoc 与分发是两份
 
 `bundle.externalBin` 里的 `coeditor-server` 是 **bun 编译的单文件可执行**（内含 JavaScriptCore），因此需要 JIT 相关权限；而 ad-hoc 没有 Team ID，还要额外放开库校验：
@@ -215,6 +246,13 @@ cd desktop && npx tauri build --bundles app
 - **多个团队**：Apple ID 属于多个团队时需设 `APPLE_PROVIDER_SHORT_NAME`（`APPLE_TEAM_ID` 的补充项）。
 - **DMG 图标位置/大小在 CI 上不生效**：Tauri 已知问题 [tauri#1731](https://github.com/tauri-apps/tauri/issues/1731)，与本链路无关。
 - **Intel 机器**：矩阵里 `macos-15-intel` 出 x86_64 包，公证/签名流程完全相同。
+- **闸门误报「未启用 hardened runtime」**（已修，2026-09）：脚本里曾写成
+  `codesign -dvvv "$APP" | grep -q 'flags=.*runtime'`。`grep -q` 一命中就退出，
+  `codesign` 写端被关会收 **SIGPIPE 返回 141**，在 `set -o pipefail` 下整条管道判为失败，
+  于是**签名完全正常也会被判成没启用 hardened runtime**，严格通道永远绿不了。
+  修法是 `codesign -dvvv` 只取一次存进变量再 grep。
+  教训：管道接 `grep -q` 时，上游是可能写得多、退得慢的命令（`codesign`/`security`/`codesign -d`）
+  就要留意这个坑；本仓库其余 `grep -q` 的输入都是 `printf`，不受影响。
 
 ## 9. 激活清单
 
@@ -222,5 +260,7 @@ cd desktop && npx tauri build --bundles app
 - [ ] 建好 ASC API Key，记下 Key ID / Issuer ID，下载 `.p8`
 - [ ] 第 3 节 8 个 Secrets 全部配好
 - [ ] 跑一次 `Desktop macOS preview`（push 到 main 自动触发，或手动触发 release workflow 的 workflow_dispatch）
+  - 首次公证要排队，可能几小时：先勾 `skip_stapling` 跑一次，确认「能签名出包」（几分钟）；
+    再跑一次不勾的，确认「能公证 staple」。别在第一次就把两件事混在一次运行里等。
 - [ ] 闸门输出里确认三项：`Authority=Developer ID Application...`、`spctl ... accepted`、`stapler validate ... The validate action worked`
 - [ ] 下载 dmg 到一台**没装过本应用**的 Mac 上双击验证零提示

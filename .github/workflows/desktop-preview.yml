@@ -10,7 +10,17 @@ on:
       - 'docs/**'
   # 支持手动触发：Actions → Desktop macOS preview → Run workflow
   # （只想验证一次 macOS 打包/签名时用它，不必推提交；release workflow 则会连带出 Windows/Linux）
+  #
+  # skip_stapling=true：仍然上传公证（notarytool submit），但**不等待** Apple 出结果、
+  # 也不 staple 票据。首次公证 Apple 可能排队数小时，等它必然撞上步骤超时；
+  # 这个开关让「打包+签名」与「等公证」解耦——先拿到已签名 dmg，票据之后补。
+  # 产物**不可直接分发**（Gatekeeper 放行需要联网找 Apple 核对，离线打不开）。
   workflow_dispatch:
+    inputs:
+      skip_stapling:
+        description: '跳过等待 Apple 公证（只出已签名 dmg，快；产物不可直接分发）'
+        type: boolean
+        default: false
 
 jobs:
   macos:
@@ -131,7 +141,8 @@ jobs:
 
       # 无 tag：只构建（beforeBuildCommand 自产 H5 + sidecar），不发布
       - name: Build dmg
-        # 公证要等 Apple 排队（首次可能数小时）；给步骤设上限，避免白占 job 6 小时
+        # 公证要等 Apple 排队（首次可能数小时）；给步骤设上限，避免白占 job 6 小时。
+        # 走 skip_stapling 快速通道时不等公证，正常几分钟就能出包。
         timeout-minutes: 45
         uses: tauri-apps/tauri-action@v0
         env:
@@ -140,7 +151,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: ./desktop
-          args: --bundles dmg ${{ env.TAURI_DIST_CONFIG != '' && format('--config {0}', env.TAURI_DIST_CONFIG) || '' }}
+          args: --bundles dmg ${{ env.TAURI_DIST_CONFIG != '' && format('--config {0}', env.TAURI_DIST_CONFIG) || '' }} ${{ inputs.skip_stapling && '--skip-stapling' || '' }}
 
       # 签名闸门（fail closed）：坏签名的包用户根本无法运行（内核 SIGKILL，连「仍要打开」都不出现）。
       # 两道：① 签名完整性（ad-hoc 时允许自动重签修复）② 分发达标（Developer ID + 公证票据）
@@ -149,6 +160,10 @@ jobs:
         env:
           # 公证凭据（若已配置）来自前序步骤写入的 GITHUB_ENV；脚本用 ${VAR:-} 取值
           REQUIRE_DEVELOPER_ID: ${{ secrets.APPLE_CERTIFICATE != '' && '1' || '0' }}
+          # 快速通道：产物本来就是「已签名、未 staple」，闸门据此把公证相关判据降级为告警。
+          # AUTO_STAPLE_DMG 必须同时关掉——否则闸门自己会 notarytool submit --wait，又把时间等回去。
+          ALLOW_UNNOTARIZED: ${{ inputs.skip_stapling && '1' || '0' }}
+          AUTO_STAPLE_DMG: ${{ inputs.skip_stapling && '0' || '1' }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -166,6 +181,7 @@ jobs:
       - name: Upload dmg artifact
         uses: actions/upload-artifact@v6
         with:
-          name: coeditor-desktop-macos-${{ github.sha }}
+          # 快速通道产物未 staple，名字里标出来，避免被误当成可分发版本
+          name: coeditor-desktop-macos-${{ github.sha }}${{ inputs.skip_stapling && '-signed-unnotarized' || '' }}
           path: desktop/src-tauri/target/release/bundle/dmg/*.dmg
           if-no-files-found: error
