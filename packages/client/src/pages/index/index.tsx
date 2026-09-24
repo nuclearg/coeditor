@@ -26,7 +26,7 @@ export default function DocumentListPage() {
   const language = useI18nStore((s) => s.language)
   const [title, setTitle] = useState('')
   const [templateId, setTemplateId] = useState('') // 默认未选中模板
-  const [templateOpen, setTemplateOpen] = useState(false) // 自绘下拉面板（双端一致，PC 上不用 wxapp 底部弹层）
+  const [templateOpen, setTemplateOpen] = useState(false) // 自绘下拉面板（双端一致，PC 上不用 weapp 底部弹层）
   const [creating, setCreating] = useState(false)
   const [importing, setImporting] = useState(false)
   // 导出单篇文档（H5）
@@ -260,7 +260,7 @@ export default function DocumentListPage() {
           <View className="create-card">
             <View className="create-card-title">{t('home.createWorks')}</View>
 
-            {/* 行1：模板下拉（默认未选中，自绘面板替代 wxapp 底部弹层） */}
+            {/* 行1：模板下拉（默认未选中，自绘面板替代 weapp 底部弹层） */}
             <View className="mt-2">
               <View className="template-picker-wrap">
                 <View

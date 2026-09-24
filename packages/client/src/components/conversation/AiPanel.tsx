@@ -662,7 +662,7 @@ export function AiPanel({ docId, selection, currentContent, isAttachment, attach
           <View className="flex items-end gap-2 shrink-0" style={{ height: designPx(30) }}>
             <SlotHost slot="aipanel.head.left" />
             {/* middle 必须 flex-1 + minWidth:0：会话 tab 多时由内部 ScrollView scrollX 横向滚动，
-                而不是把 flex 布局撑破产生页面级横向滚动条（H5/wxapp 均适用） */}
+                而不是把 flex 布局撑破产生页面级横向滚动条（H5/weapp 均适用） */}
             <View className="flex-1" style={{ minWidth: 0 }}>
               <SlotHost
                 slot="aipanel.head.middle"

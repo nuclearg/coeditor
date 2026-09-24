@@ -61,7 +61,7 @@ export function EditorPanel({
   viewTitle,
 }: EditorPanelProps) {
   const t = useT()
-  // PC 宽屏占满 body；H5 窄屏/wxapp 用 autoHeight（随内容增长）
+  // PC 宽屏占满 body；H5 窄屏/weapp 用 autoHeight（随内容增长）
   const isMobile = useIsMobile()
 
   const headbarMiddleDefaults = isEditable ? (
