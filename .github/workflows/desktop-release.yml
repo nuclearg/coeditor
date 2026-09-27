@@ -291,10 +291,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          gh release create "${{ env.RELEASE_TAG }}" \
-            --title "CoEditor Desktop ${{ env.RELEASE_TAG }}" \
-            --notes '桌面客户端（Tauri 2，内置本地 server sidecar）。数据仅存本机。Windows 提供 NSIS 安装版与 zip 便携版。' \
-            --draft || true
+          # Draft Release 已由前面的 release job 建好（create-or-reuse），这里**只上传**。
+          # 不要再来一句 `gh release create ... --draft || true`：GitHub 允许「同一 tag 存在
+          # 多个 draft」，所以它不会报 already_exists，而是**真的又建一个同名空 draft**；
+          # 两个 macOS job 的 tauri-action 又会各自挑一个上传，最后 Intel 的 dmg 落到另一个
+          # draft 里。2026-09-27 实测就是这个后果（一个 draft 5 个资产、另一个只有 x64.dmg）。
           gh release upload "${{ env.RELEASE_TAG }}" \
             src-tauri/target/release/bundle/nsis/*-setup.exe \
             CoEditor_*_x64-portable.zip --clobber
