@@ -170,7 +170,7 @@ sometimes take days"）。所以「打包+签名」和「等公证」必须能�
 > bash desktop/scripts/verify-macos-dist.sh dist/CoEditor.dmg                          # 复验（不带 ALLOW_UNNOTARIZED）
 > ```
 
-### 4.2 发版（打 tag）与 preview 的三点差别
+### 4.2 发版（打 tag）与 preview 的四点差别
 
 - **tag 触发跑的是「tag 所指那次提交」里的 workflow，而不是 main 上的最新版。**
   v0.1.0 的 tag 打在 2026-09-13 的提交上，早于本签名链路，所以那次 Release 里的 dmg 是
@@ -189,6 +189,12 @@ sometimes take days"）。所以「打包+签名」和「等公证」必须能�
   排障：`gh api "repos/<owner>/<repo>/releases?per_page=50" --jq '.[] | "\(.id) \(.tag_name) draft=\(.draft) \([.assets[].name]|join(","))"'`
   能一眼看出资产被拆到哪几个 draft；`gh release delete <tag>` 对多 draft 会歧义，用
   `gh api -X DELETE repos/<owner>/<repo>/releases/<id>` 按 id 删。
+- **上传在闸门之后**，且 macOS 的上传由 workflow 自己用 `gh release upload` 做
+  （tauri-action 只构建、不传：不传 `tagName` 它就会跳过上传）。
+  原因：**tauri 只 staple `.app`，`.dmg` 的票据是闸门里 `notarytool submit --wait` + `stapler` 补的**。
+  若按老顺序（tauri-action 构建并上传 → 闸门再补票），Release 上那份 dmg 永远缺票据：
+  2026-09-27 把成品下载回来跑本闸门，结果是 `.app` ✅ 票据已 staple、`.dmg` ❌ 无票据。
+  顺带这也让 fail-closed 名副其实——闸门不过，一个包都不会被传上去。
 
 ## 5. entitlements：ad-hoc 与分发是两份
 

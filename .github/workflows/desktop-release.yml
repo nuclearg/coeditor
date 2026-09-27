@@ -190,8 +190,8 @@ jobs:
           echo "TAURI_DIST_CONFIG=$RUNNER_TEMP/tauri-dist.conf.json" >> "$GITHUB_ENV"
 
       # beforeBuildCommand（build-desktop.sh）会自行构建 H5 + bun 编译 sidecar。
-      # macOS：tauri-action 负责 tauri build（签名 → 公证 .app → staple）+ 上传产物到 Release
-      - name: Build & upload (macOS)
+      # macOS：tauri-action 只负责 tauri build（签名 → 公证 .app → staple .app），**不上传**。
+      - name: Build (macOS, no upload)
         # 这一步里 tauri 会 `notarytool submit --wait`：耗时的只有 Apple 排队，构建本身约 5 分钟。
         # 2026-09-23 的两次失败就是排队 >45min，notarytool 被步骤超时杀掉、正常的签名构建结果
         # 一起作废（日志末尾 "Terminate orphan process: pid (...) (notarytool)"）。
@@ -206,11 +206,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: ./desktop
-          tagName: ${{ env.RELEASE_TAG }}
-          releaseName: 'CoEditor Desktop ${{ env.RELEASE_TAG }}'
-          releaseBody: '桌面客户端（Tauri 2，内置本地 server sidecar）。数据仅存本机。'
-          releaseDraft: true
-          prerelease: false
+          # 刻意不传 tagName / releaseId：tauri-action 只在有 tagName/ releaseId 时才上传，
+          # 这里必须让它「只构建」。上传挪到闸门之后（见下），否则发布出去的是**未 staple 的 .dmg**：
+          # tauri 只 staple .app，.dmg 的票据是闸门里补的，过去闸门在上传之后跑，
+          # 于是 Release 上的 dmg 永远缺票据（2026-09-27 下载成品实测确认）。
           args: ${{ matrix.args }} ${{ env.TAURI_DIST_CONFIG != '' && format('--config {0}', env.TAURI_DIST_CONFIG) || '' }}
 
       # 签名闸门（fail closed）：坏签名的包用户根本无法运行（内核 SIGKILL，连「仍要打开」都不出现）。
@@ -236,6 +235,22 @@ jobs:
             echo "==> ② 分发达标 $t"
             bash scripts/verify-macos-dist.sh "$t"
           done
+
+      # 闸门（含给 .dmg 补公证票据 + staple）通过后才上传——这样 Release 上的就是**已 staple 的包**，
+      # 且闸门失败时什么都不会被传上去（真 fail closed）。
+      - name: Upload macOS dmg (after gate)
+        if: matrix.platform != 'windows-latest'
+        working-directory: desktop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          dmgs=(src-tauri/target/release/bundle/dmg/*.dmg)
+          if [ ${#dmgs[@]} -eq 0 ]; then
+            echo "未找到 .dmg 产物" >&2; exit 1
+          fi
+          gh release upload "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" "${dmgs[@]}" --clobber
 
       # ---- Windows：出 NSIS 安装版（-setup.exe）+ zip 便携包（-portable.zip）----
       # 便携包 = 把 NSIS 静默安装到临时目录（布局与真实安装一致），再打成 zip；
