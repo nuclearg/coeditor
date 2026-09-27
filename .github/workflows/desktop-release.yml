@@ -33,20 +33,23 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
     steps:
+      # 本 job 不做 checkout（只为建 Release，省一次拉代码），所以 gh 必须显式 `-R`：
+      # 否则 gh 找不到 git 仓库，直接 `fatal: not a git repository` 退出（第一次就是这样挂的）。
       - name: Create or reuse the draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          if gh release view "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "已存在 release，直接复用：$RELEASE_TAG"
           else
-            gh release create "$RELEASE_TAG" \
+            gh release create "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" \
               --title "CoEditor Desktop $RELEASE_TAG" \
               --notes '桌面客户端（Tauri 2，内置本地 server sidecar）。数据仅存本机。' \
               --draft
           fi
-          gh release view "$RELEASE_TAG" --json tagName,isDraft --jq '"目标: tag=\(.tagName) draft=\(.isDraft)"'
+          gh release view "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" \
+            --json tagName,isDraft --jq '"目标: tag=\(.tagName) draft=\(.isDraft)"'
 
   build:
     needs: release
