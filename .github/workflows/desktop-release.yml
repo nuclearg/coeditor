@@ -164,8 +164,12 @@ jobs:
       # beforeBuildCommand（build-desktop.sh）会自行构建 H5 + bun 编译 sidecar。
       # macOS：tauri-action 负责 tauri build（签名 → 公证 .app → staple）+ 上传产物到 Release
       - name: Build & upload (macOS)
-        # 公证要等 Apple 排队（首次可能数小时）；给步骤设上限，避免白占 job 6 小时
-        timeout-minutes: 45
+        # 这一步里 tauri 会 `notarytool submit --wait`：耗时的只有 Apple 排队，构建本身约 5 分钟。
+        # 2026-09-23 的两次失败就是排队 >45min，notarytool 被步骤超时杀掉、正常的签名构建结果
+        # 一起作废（日志末尾 "Terminate orphan process: pid (...) (notarytool)"）。
+        # 发版值得多等：给 180 分钟（远低于 job 上限 6h，避免白占），覆盖排队高峰；
+        # 若公证被 Apple 拒（Invalid）会立刻失败，可用 `notarytool log <id>` 看逐条原因，不会白等。
+        timeout-minutes: 180
         if: matrix.platform != 'windows-latest'
         uses: tauri-apps/tauri-action@v0
         env:

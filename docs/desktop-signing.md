@@ -170,6 +170,17 @@ sometimes take days"）。所以「打包+签名」和「等公证」必须能�
 > bash desktop/scripts/verify-macos-dist.sh dist/CoEditor.dmg                          # 复验（不带 ALLOW_UNNOTARIZED）
 > ```
 
+### 4.2 发版（打 tag）与 preview 的两点差别
+
+- **tag 触发跑的是「tag 所指那次提交」里的 workflow，而不是 main 上的最新版。**
+  v0.1.0 的 tag 打在 2026-09-13 的提交上，早于本签名链路，所以那次 Release 里的 dmg 是
+  **ad-hoc**（`Signature=adhoc` / `TeamIdentifier=not set`），用户双击会被拦。
+  → 要出正式包，**新 tag 必须打在当前 main 上**，不要重用旧 tag / 不要给旧提交补 tag。
+- release workflow 的 macOS 构建步骤 `timeout-minutes` 是 **180**（preview 是 45）。
+  原因：tauri 在构建步骤内部 `notarytool submit --wait`，排队久时 45 分钟会不够，
+  而这一步超时会把已经构建好的签名结果一起丢掉（见 4.1 的教训）。
+  release **不走** `skip_stapling` 快速通道——正式包必须等到 `Accepted` 并 staple 才能上传。
+
 ## 5. entitlements：ad-hoc 与分发是两份
 
 `bundle.externalBin` 里的 `coeditor-server` 是 **bun 编译的单文件可执行**（内含 JavaScriptCore），因此需要 JIT 相关权限；而 ad-hoc 没有 Team ID，还要额外放开库校验：
@@ -228,6 +239,8 @@ cd desktop && npx tauri build --bundles app
 
 ## 8. 常见坑
 
+- **Release 里的 dmg 是 ad-hoc（用户打不开）**：先看 `Signature=adhoc` 再查 tag——
+  tag 打在旧提交上就会跑旧 workflow（见 4.2）。重打新 tag 即可，不用动 secrets。
 - **证书建不出来**：Developer ID 只有 Account Holder 能建（见 2.2）。
 - **导出时格式下拉里没有 `.p12`**（只有 `.cer/.pem/.p7b`）：选中的是证书行，没带上私钥。
   点开三角展开、右键**私钥**行，或 ⌘ 同时选中证书+私钥——详见 2.3。**不用重新签发证书**。
