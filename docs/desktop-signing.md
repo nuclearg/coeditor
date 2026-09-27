@@ -181,8 +181,14 @@ sometimes take days"）。所以「打包+签名」和「等公证」必须能�
   而这一步超时会把已经构建好的签名结果一起丢掉（见 4.1 的教训）。
   release **不走** `skip_stapling` 快速通道——正式包必须等到 `Accepted` 并 staple 才能上传。
 - 发版先由 `release` job 建好（或复用）唯一一个 Draft Release，各平台 job `needs: release`
-  之后才并行上传。否则 macOS（tauri-action）与 Windows（`gh release create`）会**各自**建一个
-  同 tag 的 draft，最后留下多个同名 Draft、资产被拆散（2026-09 出现过一次，4 个）。
+  之后才并行上传；Windows 那步**只 upload，不再 create**。
+  坑在于：**GitHub 允许同一个 tag 存在多个 draft**，所以 `gh release create --draft` 不会报
+  `already_exists`，而是真的又建一个同名空 draft；随后两个 macOS job 的 tauri-action 各自挑一个
+  上传，Intel 的 dmg 就落到另一个 draft 里（2026-09 留下 4 个同名 Draft，2026-09-27 又复现成
+  「一个 5 资产 + 一个只有 x64.dmg」）。
+  排障：`gh api "repos/<owner>/<repo>/releases?per_page=50" --jq '.[] | "\(.id) \(.tag_name) draft=\(.draft) \([.assets[].name]|join(","))"'`
+  能一眼看出资产被拆到哪几个 draft；`gh release delete <tag>` 对多 draft 会歧义，用
+  `gh api -X DELETE repos/<owner>/<repo>/releases/<id>` 按 id 删。
 
 ## 5. entitlements：ad-hoc 与分发是两份
 
