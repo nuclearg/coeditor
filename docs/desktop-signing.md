@@ -170,7 +170,7 @@ sometimes take days"）。所以「打包+签名」和「等公证」必须能�
 > bash desktop/scripts/verify-macos-dist.sh dist/CoEditor.dmg                          # 复验（不带 ALLOW_UNNOTARIZED）
 > ```
 
-### 4.2 发版（打 tag）与 preview 的两点差别
+### 4.2 发版（打 tag）与 preview 的三点差别
 
 - **tag 触发跑的是「tag 所指那次提交」里的 workflow，而不是 main 上的最新版。**
   v0.1.0 的 tag 打在 2026-09-13 的提交上，早于本签名链路，所以那次 Release 里的 dmg 是
@@ -180,6 +180,9 @@ sometimes take days"）。所以「打包+签名」和「等公证」必须能�
   原因：tauri 在构建步骤内部 `notarytool submit --wait`，排队久时 45 分钟会不够，
   而这一步超时会把已经构建好的签名结果一起丢掉（见 4.1 的教训）。
   release **不走** `skip_stapling` 快速通道——正式包必须等到 `Accepted` 并 staple 才能上传。
+- 发版先由 `release` job 建好（或复用）唯一一个 Draft Release，各平台 job `needs: release`
+  之后才并行上传。否则 macOS（tauri-action）与 Windows（`gh release create`）会**各自**建一个
+  同 tag 的 draft，最后留下多个同名 Draft、资产被拆散（2026-09 出现过一次，4 个）。
 
 ## 5. entitlements：ad-hoc 与分发是两份
 

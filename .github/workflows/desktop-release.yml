@@ -24,7 +24,32 @@ permissions:
   contents: write
 
 jobs:
+  # 先建（或复用）目标 Draft Release，再让各平台并行上传。
+  # 不这么做的话，macos（tauri-action）与 windows（gh release create）会**各自** create 一个
+  # 同 tag 的 draft——2026-09 就出现过 4 个同名 draft、资产被拆散，得手工归拢。
+  # 先有一个 draft 之后，tauri-action 会 "Found draft release with tag ..." 复用同一个。
+  release:
+    runs-on: ubuntu-24.04
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+    steps:
+      - name: Create or reuse the draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "已存在 release，直接复用：$RELEASE_TAG"
+          else
+            gh release create "$RELEASE_TAG" \
+              --title "CoEditor Desktop $RELEASE_TAG" \
+              --notes '桌面客户端（Tauri 2，内置本地 server sidecar）。数据仅存本机。' \
+              --draft
+          fi
+          gh release view "$RELEASE_TAG" --json tagName,isDraft --jq '"目标: tag=\(.tagName) draft=\(.isDraft)"'
+
   build:
+    needs: release
     env:
       # tag 触发时用 tag 名；手工触发时用输入的 release_tag
       RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
@@ -273,6 +298,7 @@ jobs:
 
   # ---- Linux x64（deb + AppImage）----
   linux:
+    needs: release
     # runner 用受支持的 ubuntu-24.04，构建基座用 ubuntu:22.04 容器：
     # 产物 glibc 下限 = 2.35 → 可跑 Ubuntu 22.04+ / Debian 12+（含 WSL2 里的 Ubuntu 22.04）
     runs-on: ubuntu-24.04
