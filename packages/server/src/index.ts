@@ -17,7 +17,6 @@ import conversations from './routes/conversations.js'
 import turns from './routes/turns.js'
 import ai from './routes/ai.js'
 import settings from './routes/settings.js'
-import modelCatalog from './routes/model-catalog.js'
 import transfer from './routes/transfer.js'
 import { repo } from './store/index.js'
 import { DATA_ROOT } from './store/file-paths.js'
@@ -69,7 +68,6 @@ app.route('/', conversations)
 app.route('/', turns)
 app.route('/', ai)
 app.route('/', settings)
-app.route('/', modelCatalog)
 app.route('/', transfer)
 
 // Initialize repository (user env setup)

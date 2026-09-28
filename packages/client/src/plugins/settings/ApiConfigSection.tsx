@@ -1,114 +1,41 @@
 import { ScrollView, View } from '@tarojs/components'
-import Taro from '@tarojs/taro'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { useT } from '@/lib/i18n'
 import { showErrorToast } from '@/lib/toast'
-import { api, buildHeaders } from '@/api/client'
-import type { AppSettings } from '@coeditor/shared'
+import { api } from '@/api/client'
+import {
+  DEFAULT_LLM_BASE_URL,
+  DEFAULT_SETTINGS,
+  LLM_PROVIDERS,
+  findProviderForModel,
+  type AppSettings,
+  type LlmProvider,
+} from '@coeditor/shared'
 import { cn, isWebView } from '@/lib/utils'
 
 /**
  * AI 接口配置区块（设置页内，BYOK）。
  *
- * 照搬 opencode 的连接逻辑：从 opencode zen 模型目录（服务端代理 /api/models）
- * 按模型前缀归组成“模型提供商”，先选提供商、再选该提供商的模型。
- * - Base URL / API Key 仍是用户自己的（BYOK）；选择带默认网关的提供商时，
- *   若用户未手动改过 Base URL，会自动带出其默认地址（可再改）。
- * - 支持“自定义（OpenAI 兼容）”：手动填任意模型 ID（本地 ollama 等）。
+ * 数据源是 `@coeditor/shared` 里的**静态预置表**（LLM_PROVIDERS），不再请求
+ * 任何在线模型目录：离线/内网/桌面壳都能即时渲染，也不依赖第三方目录服务。
+ * 交互仍是「先选提供商、再选该提供商的模型」：
+ * - Base URL / API Key 始终是用户自己的（BYOK）；切换提供商时，若用户没手动
+ *   改过 Base URL，自动带出该网关的默认地址（可再改）。
+ * - 「自定义（OpenAI 兼容）」不带预置模型，全部手填（本地 ollama / 自建网关）。
+ * - 已知提供商下也能选「手动输入模型 ID」：预置列表只是常见档位的快捷方式，
+ *   厂商模型 ID 变动频繁，最终以厂商文档为准。
  */
-interface ZenCatalog {
-  /** 按 zen /models 前缀归组后的提供商列表（含“其他”兜底桶，不含自定义项） */
-  groups: ZenProvider[]
-  /** 目录里没有前缀映射（无法归组）时，该族落在哪个组 id（可能为 null） */
-}
-interface ZenProvider {
-  id: string
-  label: string
-  models: string[]
-}
 
+/** 「自定义（OpenAI 兼容）」的哨兵 id，不是预置表里的条目 */
 const CUSTOM_PROVIDER_ID = '__custom__'
-const MISC_PROVIDER_ID = '__zen_misc__'
+/** 模型下拉里的「手动输入模型 ID」哨兵值 */
+const MANUAL_MODEL_ID = '__manual__'
 
-/** 已知厂商族 → 展示名（zen /models 前缀，按 id 首段匹配） */
-const FAMILY_LABELS: Record<string, string> = {
-  deepseek: 'DeepSeek',
-  gpt: 'OpenAI',
-  claude: 'Anthropic Claude',
-  gemini: 'Google Gemini',
-  grok: 'xAI Grok',
-  glm: '智谱 GLM',
-  kimi: '月之暗面 Kimi',
-  minimax: 'MiniMax',
-  qwen3: '通义千问 Qwen',
-  nemotron: 'NVIDIA Nemotron',
-  muse: 'Muse',
-  big: 'Big',
-  ling: 'Ling',
-  mimo: 'Mimo',
-  laguna: 'Laguna',
-}
-
-/** 常见 OpenAI 兼容网关的默认 Base URL（仅作自动建议，用户可改）。
- *  键与 zen /models 的族前缀一致（= 提供商下拉的 id），如 openai→gpt、anthropic→claude。 */
-const BASE_PRESETS: Record<string, string> = {
-  deepseek: 'https://api.deepseek.com/v1',
-  gpt: 'https://api.openai.com/v1',
-  grok: 'https://api.x.ai/v1',
-  glm: 'https://open.bigmodel.cn/api/paas/v4',
-  kimi: 'https://api.moonshot.cn/v1',
-  minimax: 'https://api.minimaxi.com/v1',
-  qwen3: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-}
-
-/** zen /models 的 OpenAI 兼容网关地址（未映射厂商/兜底桶走它） */
-const ZEN_BASE_URL = 'https://opencode.ai/zen/v1'
-
-function familyOf(modelId: string): string {
-  const m = /^([a-zA-Z0-9]+)[.\-]/.exec(modelId.trim())
-  return (m?.[1] ?? modelId.trim()).toLowerCase()
-}
-
-function groupZenModels(ids: string[], miscLabel: string): ZenProvider[] {
-  const buckets = new Map<string, string[]>()
-  const order: string[] = []
-  for (const id of ids) {
-    const fam = familyOf(id)
-    if (!buckets.has(fam)) {
-      buckets.set(fam, [])
-      order.push(fam)
-    }
-    buckets.get(fam)!.push(id)
-  }
-  const groups: ZenProvider[] = []
-  for (const fam of order) {
-    const models = buckets.get(fam)!
-    const label = FAMILY_LABELS[fam]
-    if (label) {
-      groups.push({ id: fam, label, models })
-    } else {
-      const misc = groups.find((g) => g.id === MISC_PROVIDER_ID)
-      if (misc) misc.models.push(...models)
-      else groups.push({ id: MISC_PROVIDER_ID, label: miscLabel, models: [...models] })
-    }
-  }
-  return groups
-}
-
-async function fetchZenModels(): Promise<string[]> {
-  const res = await Taro.request<{ success: boolean; data?: { models?: string[] }; error?: string }>({
-    url: `${API_BASE_URL}/api/models`,
-    method: 'GET',
-    header: await buildHeaders(),
-    timeout: 15_000,
-  })
-  if (res.statusCode !== 200 || !res.data?.success || !Array.isArray(res.data.data?.models)) {
-    throw new Error(res.data?.error || `HTTP ${res.statusCode}`)
-  }
-  return res.data.data!.models!
+function providerById(id: string): LlmProvider | undefined {
+  return LLM_PROVIDERS.find((p) => p.id === id)
 }
 
 interface SelectBoxProps {
@@ -170,67 +97,29 @@ function SelectBox({ value, options, placeholder, disabled, onSelect }: SelectBo
 
 export function ApiConfigSection() {
   const t = useT()
-  const [settings, setSettings] = useState<AppSettings>({
-    apiKey: '',
-    apiBaseUrl: 'https://api.deepseek.com/v1',
-    model: 'deepseek-v4-flash',
-    style: 'gentle',
-    showThinking: true,
-  })
+  const [settings, setSettings] = useState<AppSettings>({ ...DEFAULT_SETTINGS })
   const [saved, setSaved] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [apiKeyDirty, setApiKeyDirty] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // opencode zen 模型目录
-  const [catalogIds, setCatalogIds] = useState<string[]>([])
-  const [catalogState, setCatalogState] = useState<'loading' | 'ok' | 'failed'>('loading')
+  // 用户显式选择过的提供商。null = 还没选：此时由已保存的 model **推导**（见
+  // activeProviderId），而不是写回 state。这样无需「等 settings.get 回来再同步」，
+  // 也不会出现「先把默认模型推导成提供商、用户已保存的模型再也映射不回去」的竞态。
+  const [pickedProviderId, setPickedProviderId] = useState<string | null>(null)
+  // 模型是否走手填（自定义提供商固定手填；预置提供商可切到「手动输入模型 ID」）
+  const [modelManual, setModelManual] = useState(false)
+  // Base URL 是否被用户手动改过：改过就不再自动跟随提供商预设
   const baseUrlTouchedRef = useRef(false)
 
-  // 提供商选项 = zen 归组 + 自定义（OpenAI 兼容）
-  const groups = useMemo(
-    () => groupZenModels(catalogIds, t('apiConfig.providerZenMisc')),
-    [catalogIds, t],
-  )
-  const providerOptions = useMemo(
-    () => [
-      ...groups.map((g) => ({ value: g.id, label: g.label })),
-      { value: CUSTOM_PROVIDER_ID, label: t('apiConfig.providerCustom') },
-    ],
-    [groups, t],
-  )
-
-  const loadCatalog = async () => {
-    setCatalogState('loading')
-    try {
-      const ids = await fetchZenModels()
-      setCatalogIds(ids)
-      setCatalogState('ok')
-    } catch (err) {
-      console.warn('[zenModels] load failed:', err)
-      setCatalogState('failed')
-    }
-  }
-
-  // 当前选中的提供商。null = 尚未显式选择：由 settings.model 的族归属推导一次后固定。
-  const [providerId, setProviderId] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (catalogState === 'ok' && providerId === null) {
-      const fam = familyOf(settings.model)
-      const g = groups.find((x) => x.id === fam || x.models.includes(settings.model))
-      setProviderId(g?.id ?? CUSTOM_PROVIDER_ID)
-    }
-  }, [catalogState, groups, settings.model, providerId])
-
-  const activeProviderId = providerId ?? CUSTOM_PROVIDER_ID
+  const activeProviderId = pickedProviderId ?? findProviderForModel(settings.model)?.id ?? CUSTOM_PROVIDER_ID
+  const activeProvider = providerById(activeProviderId)
 
   useEffect(() => {
     api.rpc<AppSettings>('settings.get')
       .then((s) => { setSettings(s); setApiKeyDirty(false) })
       .catch((err) => { console.error('[loadSettings]', err); setLoadError(true) })
-    void loadCatalog()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -238,28 +127,50 @@ export function ApiConfigSection() {
     }
   }, [])
 
+  const providerOptions = useMemo(
+    () => [
+      ...LLM_PROVIDERS.map((p) => ({ value: p.id, label: p.label })),
+      { value: CUSTOM_PROVIDER_ID, label: t('apiConfig.providerCustom') },
+    ],
+    [t],
+  )
+
+  /** 切换提供商：同步 Base URL 与模型 */
   const handlePickProvider = (id: string) => {
-    setProviderId(id)
-    if (id === CUSTOM_PROVIDER_ID) return
-    const group = groups.find((g) => g.id === id)
-    if (!group) return
+    setPickedProviderId(id)
+    setModelManual(false)
+
+    if (id === CUSTOM_PROVIDER_ID) {
+      // 自定义网关：只动 Base URL（若用户没手动改过），模型留给用户填
+      if (!baseUrlTouchedRef.current) {
+        setSettings((prev) => ({ ...prev, apiBaseUrl: DEFAULT_LLM_BASE_URL }))
+      }
+      return
+    }
+
+    const provider = providerById(id)
+    if (!provider) return
 
     setSettings((prev) => {
       const next = { ...prev }
-      // 模型：同族未换（含列表外旧 id）则不打扰；否则落到该族第一个模型
-      const belongs = prev.model && (familyOf(prev.model) === id || group.models.includes(prev.model))
-      if (!belongs && group.models.length > 0) next.model = group.models[0]
+      // 模型：同族不打扰（含列表外的旧 ID / 手填 ID）；否则落到该族第一个预置模型
+      const belongs = findProviderForModel(prev.model)?.id === provider.id
+      if (!belongs && provider.models.length > 0) next.model = provider.models[0]
 
-      // Base URL：用户没手动改过时才自动建议默认网关地址
+      // Base URL：用户没手动改过时才自动建议该网关默认地址
       if (!baseUrlTouchedRef.current) {
-        const preset = BASE_PRESETS[id] ?? ZEN_BASE_URL
-        const prevPreset = BASE_PRESETS[familyOf(prev.model)]
-        if (preset && (!prev.apiBaseUrl || prev.apiBaseUrl === prevPreset)) {
-          next.apiBaseUrl = preset
-        }
+        next.apiBaseUrl = provider.defaultBaseUrl
       }
       return next
     })
+  }
+
+  const handlePickModel = (value: string) => {
+    if (value === MANUAL_MODEL_ID) {
+      setModelManual(true)
+      return
+    }
+    setSettings((prev) => ({ ...prev, model: value }))
   }
 
   const saveSettings = async () => {
@@ -285,6 +196,17 @@ export function ApiConfigSection() {
   }
 
   const isCustom = activeProviderId === CUSTOM_PROVIDER_ID
+  const presetModels = activeProvider?.models ?? []
+  // 自定义提供商、或用户选了「手动输入模型 ID」、或该提供商暂无预置模型 → 手填
+  const manualModel = isCustom || modelManual || presetModels.length === 0
+  const modelOptions = [
+    { value: MANUAL_MODEL_ID, label: t('apiConfig.modelManualOption') },
+    ...presetModels.map((m) => ({ value: m, label: m })),
+    // 已保存/手填的模型不在预置列表里时补进下拉，否则触发器会退回占位文案
+    ...(settings.model && !presetModels.includes(settings.model)
+      ? [{ value: settings.model, label: settings.model }]
+      : []),
+  ]
 
   return (
     <View className="settings-section">
@@ -292,40 +214,34 @@ export function ApiConfigSection() {
 
       {/* 模型提供商 */}
       <View className="text-sm font-medium mb-1">{t('apiConfig.provider')}</View>
-      {catalogState === 'loading' ? (
-        <View className="text-xs text-muted" style={{ padding: '10px 0' }}>{t('apiConfig.modelsLoading')}</View>
-      ) : catalogState === 'failed' ? (
-        <View className="flex items-center gap-3">
-          <View className="text-xs text-muted flex-1">{t('apiConfig.modelsLoadFailed')}</View>
-          <Button variant="outline" size="sm" onClick={loadCatalog}>{t('common.retry')}</Button>
-        </View>
-      ) : (
-        <SelectBox
-          value={activeProviderId}
-          options={providerOptions}
-          onSelect={handlePickProvider}
-        />
-      )}
+      <SelectBox
+        value={activeProviderId}
+        options={providerOptions}
+        onSelect={handlePickProvider}
+      />
+      <View className="text-xs mt-1 text-muted">{t('apiConfig.providerHint')}</View>
 
-      {/* 模型：已知提供商 → 下拉；自定义 → 手动输入 */}
+      {/* 模型：预置提供商 → 下拉（含手填项）；自定义 → 直接手填 */}
       <View className="mt-3">
         <View className="text-sm font-medium mb-1">{t('apiConfig.model')}</View>
-        {isCustom || catalogState !== 'ok' ? (
+        {manualModel ? (
           <>
             <Input
               placeholder="deepseek-chat"
               value={settings.model}
               onChange={(v) => setSettings({ ...settings, model: v })}
             />
-            <View className="text-xs mt-1 text-muted">{t('apiConfig.modelManualHint')}</View>
+            <View className="text-xs mt-1 text-muted">
+              {isCustom ? t('apiConfig.modelManualHint') : t('apiConfig.modelHint')}
+            </View>
           </>
         ) : (
           <>
             <SelectBox
               value={settings.model}
-              options={(groups.find((g) => g.id === activeProviderId)?.models ?? []).map((m) => ({ value: m, label: m }))}
+              options={modelOptions}
               placeholder={t('apiConfig.chooseModel')}
-              onSelect={(m) => setSettings({ ...settings, model: m })}
+              onSelect={handlePickModel}
             />
             <View className="text-xs mt-1 text-muted">{t('apiConfig.modelHint')}</View>
           </>

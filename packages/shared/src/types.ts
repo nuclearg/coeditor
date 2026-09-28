@@ -204,7 +204,12 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   apiKey: '',
   apiBaseUrl: 'https://api.deepseek.com/v1',
-  model: 'deepseek-v4-flash',
+  model: 'deepseek-flash',
   style: 'gentle',
   showThinking: true,
 }
+
+// 内置模型提供商预置（BYOK 设置页的静态数据源，离线可用）。
+// 从本文件转出：客户端 webpack alias 与服务端 tsconfig paths 都把
+// `@coeditor/shared` 精确指向本文件，转出后两端 import 路径都无需改动。
+export * from './providers'

@@ -364,7 +364,7 @@ export const plugins: CoEditorPlugin[] = [settingsPlugin, userPlugin]
 `settingsPlugin` 注册 `ui.slots['settings.body']`，填充设置页内容区，内容分三块：
 
 1. **偏好区**：审阅风格 / 思考过程（CoT）/ 主题 / 语言（`SettingsPrefs`，齿轮下拉与设置页共用）
-2. **API 配置（BYOK）**：模型（从 OpenCode Zen 拉取建议，失败用内置回退）+ API Key（存本机服务端 `settings.get/update`，不随构建产物分发）+ API Base URL
+2. **API 配置（BYOK）**：模型提供商 + 模型 + API Key（存本机服务端 `settings.get/update`，不随构建产物分发）+ API Base URL。提供商下拉来自 `@coeditor/shared` 的静态预置表 `LLM_PROVIDERS`（`packages/shared/src/providers.ts`，纯离线、不请求任何在线目录）：内置 OpenAI / Anthropic / Gemini / DeepSeek / 通义千问 / Kimi / 智谱 GLM / MiniMax / xAI / Mistral / Groq / OpenRouter / 硅基流动 / 火山方舟 / Ollama / vLLM 等常见 OpenAI 兼容网关。选中提供商时自动带出其默认 Base URL（用户手动改过则不覆盖），并可从该提供商的常见模型中选；「自定义（OpenAI 兼容）」或「手动输入模型 ID」可填任意模型名
 3. **数据目录**：展示/切换服务端数据保存目录（`DATA_ROOT`），桌面壳（Tauri）提供系统文件夹选择器
 
 配置保存到服务端（`POST /api/settings.update`），`ai.chat` 服务端读取，前端无需感知。
