@@ -6,13 +6,24 @@
  *   E2E_MOCK_CHUNKS 总块数（默认 70）
  *   E2E_MOCK_DELAY  每块间隔 ms（默认 100）
  *   E2E_MOCK_CHARS  每块字符数（默认 30）
+ *   E2E_MOCK_TEXT_FILE 用文件内容替代默认的占位长文本（见下）
  */
 import { createServer, type Server } from 'node:http'
+import { readFileSync } from 'node:fs'
 import type { AddressInfo } from 'node:net'
 
 const CHUNKS = Number(process.env.E2E_MOCK_CHUNKS) || 100
 const DELAY = Number(process.env.E2E_MOCK_DELAY) || 120
 const CHARS = Number(process.env.E2E_MOCK_CHARS) || 30
+
+/**
+ * 默认流式文本：刻意是"第 N 段 E2E 模拟 AI 输出…"这种占位内容——它的用途只是
+ * 撑高对话区以便断言吸底滚动，**不是给人看的**。
+ *
+ * 需要产出可展示的界面（演示录像、产品页截图）时，用 `E2E_MOCK_TEXT_FILE` 指向一个
+ * 文件，流式内容就换成文件里的真实文案（例如一段像样的审阅意见）。默认行为不变。
+ */
+const TEXT_FILE = process.env.E2E_MOCK_TEXT_FILE
 
 /**
  * 非流式（documents.importText 分章）固定响应：切分指令的 startHint 必须与
@@ -27,6 +38,15 @@ const IMPORT_PLAN_JSON = JSON.stringify({
 })
 
 function buildContent(chunks: number): string {
+  // 指定了文案文件就用它（读不到时退回默认，免得录制/演示因路径写错而静默变空流）
+  if (TEXT_FILE) {
+    try {
+      const text = readFileSync(TEXT_FILE, 'utf8').trim()
+      if (text) return text
+    } catch {
+      /* fallthrough：文件不存在或不可读时用默认占位文本 */
+    }
+  }
   const paragraphs: string[] = []
   for (let i = 0; i < chunks; i++) {
     paragraphs.push(
